@@ -1,0 +1,65 @@
+<%- include('partials/head') %>
+  <div class="auth-split">
+    <aside class="auth-panel">
+      <div class="auth-logo">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+        <span>TIC &amp; Stock</span>
+      </div>
+      <div class="auth-panel-text">
+        <h1>Control total de tu inventario, en un solo lugar.</h1>
+        <p>Gestioná los insumos del taller, registrá retiros y devoluciones, y consultá el stock en tiempo real.</p>
+      </div>
+      <div class="auth-stats">
+        <div><strong>100 min</strong><span>de búsqueda recuperados por semana</span></div>
+        <div><strong>100%</strong><span>de los materiales trazados</span></div>
+        <div><strong>30 s</strong><span>para registrar un movimiento</span></div>
+      </div>
+    </aside>
+
+    <main class="auth-form-wrap">
+      <div class="auth-logo auth-logo--mobile">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+        <span>TIC &amp; Stock</span>
+      </div>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Bienvenido de vuelta</h2>
+          <p>Ingresá tus credenciales para continuar</p>
+        </div>
+
+        <% if (error) { %>
+          <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+
+        <form action="/login" method="post" novalidate id="login-form">
+          <div class="field">
+            <label for="email">Correo electrónico</label>
+            <input id="email" name="email" type="email" placeholder="tu@ejemplo.com"
+                   value="<%= email %>" required autocomplete="email" />
+            <small class="field-error" data-error-for="email"></small>
+          </div>
+          <div class="field">
+            <label for="password">Contraseña</label>
+            <input id="password" name="password" type="password" placeholder="Ingresá tu contraseña"
+                   required autocomplete="current-password" />
+            <small class="field-error" data-error-for="password"></small>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block" id="login-submit">Iniciar sesión</button>
+          <p class="auth-switch">¿No tenés cuenta? <a href="/register">Registrate</a></p>
+        </form>
+      </section>
+    </main>
+  </div>
+  <script src="/js/login.js" defer></script>
+</body>
+</html>
