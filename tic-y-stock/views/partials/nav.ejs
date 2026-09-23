@@ -1,0 +1,45 @@
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="auth-logo" href="<%= user ? (user.rol === 'superusuario' ? '/admin' : '/panel') : '/' %>">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+        <path d="m3.3 7 8.7 5 8.7-5" />
+        <path d="M12 22V12" />
+      </svg>
+      <span>TIC &amp; Stock</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Navegación principal">
+      <% if (user) { %>
+        <% if (user.rol === 'superusuario') { %>
+          <a href="/admin" class="<%= seccion === 'admin' ? 'active' : '' %>">Dashboard</a>
+          <a href="/admin/inventario" class="<%= seccion === 'inventario' ? 'active' : '' %>">Inventario</a>
+          <a href="/admin/usuarios" class="<%= seccion === 'usuarios' ? 'active' : '' %>">Usuarios</a>
+        <% } else { %>
+          <a href="/panel" class="<%= seccion === 'panel' ? 'active' : '' %>">Materiales</a>
+        <% } %>
+        <a href="/contacto" class="<%= seccion === 'contacto' ? 'active' : '' %>">Contacto</a>
+        <a href="/institucional" class="<%= seccion === 'institucional' ? 'active' : '' %>">Institucional</a>
+      <% } else { %>
+        <a href="/login">Iniciar sesión</a>
+        <a href="/register">Registrarse</a>
+        <a href="/contacto" class="<%= seccion === 'contacto' ? 'active' : '' %>">Contacto</a>
+        <a href="/institucional" class="<%= seccion === 'institucional' ? 'active' : '' %>">Institucional</a>
+      <% } %>
+    </nav>
+
+    <div class="topbar-user">
+      <% if (user) { %>
+        <span class="badge badge--<%= user.rol %>"><%= user.rol %></span>
+        <span class="topbar-name"><%= user.nombre %></span>
+        <a class="btn btn--ghost" href="/logout">Cerrar sesión</a>
+      <% } %>
+    </div>
+  </div>
+</header>
+
+<% if (mensaje) { %>
+  <div class="page-message">
+    <div class="alert alert--<%= mensaje.tipo %>" role="status"><%= mensaje.texto %></div>
+  </div>
+<% } %>

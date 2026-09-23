@@ -1,0 +1,42 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Contacto y soporte</h1>
+      <p>Envianos una consulta; el equipo te responde a la brevedad.</p>
+    </div>
+
+    <% if (enviado) { %>
+      <div class="alert alert--exito" role="status">
+        Gracias por escribirnos. Tu consulta fue registrada.
+      </div>
+    <% } else { %>
+      <% if (Object.keys(errores).length > 0) { %>
+        <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+      <% } %>
+
+      <form action="/contacto" method="post" novalidate>
+        <div class="field">
+          <label for="contacto-nombre">Nombre</label>
+          <input id="contacto-nombre" name="nombre" type="text" placeholder="Tu nombre completo" value="<%= form.nombre %>" required />
+          <small class="field-error"><%= errores.nombre || '' %></small>
+        </div>
+        <div class="field">
+          <label for="contacto-email">Correo electrónico</label>
+          <input id="contacto-email" name="email" type="email" placeholder="tu@ejemplo.com" value="<%= form.email %>" required />
+          <small class="field-error"><%= errores.email || '' %></small>
+        </div>
+        <div class="field">
+          <label for="contacto-mensaje">Mensaje</label>
+          <textarea id="contacto-mensaje" name="mensaje" rows="5" maxlength="1000" placeholder="Contanos qué necesitás…" required><%= form.mensaje %></textarea>
+          <small class="field-error"><%= errores.mensaje || '' %></small>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Enviar consulta</button>
+      </form>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>

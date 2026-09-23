@@ -1,0 +1,60 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/panel">← Volver a materiales</a>
+
+  <div class="detail-grid">
+    <div class="item-detail-media">
+      <% if (item.foto) { %>
+        <img src="<%= item.foto %>" alt="Foto de <%= item.nombre %>" />
+      <% } else { %>
+        <div class="item-detail-placeholder">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <path d="m3.3 7 8.7 5 8.7-5" />
+            <path d="M12 22V12" />
+          </svg>
+          <span>Sin foto</span>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card item-detail-info">
+      <div class="card-header">
+        <h2><%= item.nombre %></h2>
+        <p><%= item.categoria %> · <%= item.ubicacion || 'Sin ubicación' %></p>
+      </div>
+
+      <span class="badge badge--estado badge--<%= item.estado %>"><%= ESTADOS_LABEL[item.estado] %></span>
+
+      <dl class="info-list">
+        <div>
+          <dt>Disponibles</dt>
+          <dd><strong class="<%= item.estado === 'disponible' && item.cantidad === 0 ? 'text-critical' : '' %>"><%= item.cantidad %></strong></dd>
+        </div>
+        <div>
+          <dt>Cantidad mínima</dt>
+          <dd><%= item.cantidad_minima %></dd>
+        </div>
+        <div>
+          <dt>Ubicación</dt>
+          <dd><%= item.ubicacion || '—' %></dd>
+        </div>
+        <div>
+          <dt>Cargado el</dt>
+          <dd><%= new Date(item.fecha_creacion).toLocaleDateString('es-AR') %></dd>
+        </div>
+        <% if (item.observaciones) { %>
+          <div>
+            <dt>Observaciones</dt>
+            <dd><%= item.observaciones %></dd>
+          </div>
+        <% } %>
+      </dl>
+
+      <p class="muted">En caso de necesitar este material, consultá con el responsable del pañol (docente o Jefe de Taller).</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

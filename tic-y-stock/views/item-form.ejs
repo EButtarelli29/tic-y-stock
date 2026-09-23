@@ -1,0 +1,98 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/inventario">← Volver al inventario</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1><%= item ? 'Editar ítem' : 'Nuevo ítem' %></h1>
+      <p><%= item ? `Modificá los datos de "${item.nombre}".` : 'Cargá un material del pañol del taller.' %></p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <form action="<%= item ? `/admin/inventario/${item.id}/editar` : '/admin/inventario/nuevo' %>" method="post" enctype="multipart/form-data" novalidate>
+      <div class="field">
+        <label for="nombre">Nombre del material</label>
+        <input id="nombre" name="nombre" type="text" placeholder="Ej: Cable UTP Cat6" value="<%= form.nombre %>" required />
+        <small class="field-error"><%= errores.nombre || '' %></small>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="categoria">Categoría / tipo</label>
+          <input id="categoria" name="categoria" type="text" list="lista-categorias" placeholder="Ej: cables" value="<%= form.categoria %>" required />
+          <datalist id="lista-categorias">
+            <% categorias.forEach((c) => { %>
+              <option value="<%= c %>"></option>
+            <% }) %>
+          </datalist>
+          <small class="field-error"><%= errores.categoria || '' %></small>
+        </div>
+        <div class="field">
+          <label for="ubicacion">Ubicación</label>
+          <input id="ubicacion" name="ubicacion" type="text" list="lista-ubicaciones" placeholder="Ej: estante 3" value="<%= form.ubicacion %>" />
+          <datalist id="lista-ubicaciones">
+            <% ubicaciones.forEach((u) => { %>
+              <option value="<%= u %>"></option>
+            <% }) %>
+          </datalist>
+          <small class="field-error"><%= errores.ubicacion || '' %></small>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="cantidad">Cantidad disponible</label>
+          <input id="cantidad" name="cantidad" type="number" min="0" step="1" value="<%= form.cantidad %>" required />
+          <small class="field-error"><%= errores.cantidad || '' %></small>
+        </div>
+        <div class="field">
+          <label for="cantidad_minima">Cantidad mínima (stock crítico)</label>
+          <input id="cantidad_minima" name="cantidad_minima" type="number" min="0" step="1" value="<%= form.cantidad_minima %>" required />
+          <small class="field-error"><%= errores.cantidad_minima || '' %></small>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="estado">Estado</label>
+        <select id="estado" name="estado" required>
+          <% ESTADOS.forEach((e) => { %>
+            <option value="<%= e %>" <%= form.estado === e ? 'selected' : '' %>><%= e %></option>
+          <% }) %>
+        </select>
+        <small class="field-error"><%= errores.estado || '' %></small>
+      </div>
+
+      <div class="field">
+        <label for="observaciones">Observaciones</label>
+        <textarea id="observaciones" name="observaciones" rows="3" maxlength="500" placeholder="Detalles útiles para el pañolero…"><%= form.observaciones %></textarea>
+        <small class="field-error"><%= errores.observaciones || '' %></small>
+      </div>
+
+      <div class="field">
+        <label for="foto">Foto técnica</label>
+        <% if (item && item.foto) { %>
+          <div class="foto-actual">
+            <img src="<%= item.foto %>" alt="Foto actual de <%= item.nombre %>" class="thumb thumb--lg" />
+            <label class="checkbox-label">
+              <input type="checkbox" name="quitar_foto" value="1" /> Quitar la foto actual
+            </label>
+          </div>
+        <% } %>
+        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+        <small>JPG, PNG, WEBP o GIF · máximo 5 MB</small>
+      </div>
+
+      <input type="hidden" name="foto" value="<%= item && item.foto ? item.foto : '' %>" />
+
+      <button type="submit" class="btn btn--primary btn--block">
+        <%= item ? 'Guardar cambios' : 'Cargar ítem' %>
+      </button>
+    </form>
+  </section>
+</main>
+</body>
+</html>

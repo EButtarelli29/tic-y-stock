@@ -1,0 +1,73 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Usuarios</h1>
+      <p>Alta, baja y edición de cuentas (alumnos y superusuarios).</p>
+    </div>
+    <a class="btn btn--primary" href="/admin/usuarios/nuevo">+ Nuevo usuario</a>
+  </header>
+
+  <form class="filters-form" action="/admin/usuarios" method="get">
+    <div class="field filters-search">
+      <label class="sr-only" for="buscar-usuarios">Buscar</label>
+      <input id="buscar-usuarios" name="q" type="search" placeholder="Buscar por nombre o correo…" value="<%= filtros.q %>" />
+    </div>
+    <div class="field">
+      <label for="rol">Rol</label>
+      <select id="rol" name="rol">
+        <option value="">Todos</option>
+        <option value="usuario" <%= filtros.rol === 'usuario' ? 'selected' : '' %>>usuario</option>
+        <option value="superusuario" <%= filtros.rol === 'superusuario' ? 'selected' : '' %>>superusuario</option>
+      </select>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn btn--primary">Filtrar</button>
+      <a class="btn btn--outline" href="/admin/usuarios">Limpiar</a>
+    </div>
+  </form>
+
+  <% if (usuarios.length === 0) { %>
+    <div class="empty-state">
+      <h2>Sin resultados</h2>
+      <p>No hay usuarios que coincidan con la búsqueda.</p>
+    </div>
+  <% } else { %>
+    <p class="muted list-count"><%= usuarios.length %> usuario(s)</p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th>Alta</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% usuarios.forEach((u) => { %>
+            <tr>
+              <td><%= u.nombre %><% if (u.id === user.id) { %> <span class="muted">(vos)</span><% } %></td>
+              <td><%= u.email %></td>
+              <td><span class="badge badge--<%= u.rol %>"><%= u.rol %></span></td>
+              <td><%= new Date(u.fecha_creacion).toLocaleDateString('es-AR') %></td>
+              <td class="table-actions">
+                <a class="btn btn--outline btn--sm" href="/admin/usuarios/<%= u.id %>/editar">Editar</a>
+                <% if (u.id !== user.id) { %>
+                  <form method="post" action="/admin/usuarios/<%= u.id %>/eliminar" data-confirmar-eliminar data-nombre="<%= u.nombre %>">
+                    <button type="submit" class="btn btn--danger btn--sm">Eliminar</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</main>
+<script src="/js/usuarios.js" defer></script>
+</body>
+</html>

@@ -1,27 +1,76 @@
 <%- include('partials/head') %>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="auth-logo">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-          <path d="m3.3 7 8.7 5 8.7-5" />
-          <path d="M12 22V12" />
-        </svg>
-        <span>TIC &amp; Stock</span>
-      </div>
-      <div class="topbar-user">
-        <span class="badge badge--<%= user.rol %>"><%= user.rol %></span>
-        <span class="topbar-name"><%= user.nombre %></span>
-        <a class="btn btn--ghost" href="/logout">Cerrar sesión</a>
-      </div>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Materiales del taller</h1>
+      <p>Consultá el stock del pañol antes de acercarte. El listado refleja la información del inventario en tiempo real.</p>
     </div>
+    <p class="page-header-meta"><%= totalDisponibles %> disponibles ahora</p>
   </header>
-  <main class="placeholder">
-    <section class="card placeholder-card">
-      <h2>Panel del alumno — en construcción</h2>
-      <p>La vista de consulta de stock en tiempo real llega en la próxima etapa (Sprint 3).</p>
-      <p class="placeholder-session">Sesión iniciada como <strong><%= user.email %></strong>.</p>
+
+  <form class="filters-form" action="/panel" method="get">
+    <div class="field filters-search">
+      <label class="sr-only" for="buscar-material">Buscar por nombre</label>
+      <input id="buscar-material" name="buscar" type="search" placeholder="Buscar material (escribí para filtrar)" data-filtro-busqueda />
+    </div>
+    <div class="field">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Todos los tipos</option>
+        <% categorias.forEach((c) => { %>
+          <option value="<%= c %>" <%= tipo === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="disponibilidad">Disponibilidad</label>
+      <select id="disponibilidad" name="disponibilidad">
+        <option value="">Todos</option>
+        <option value="disponible" <%= disponibilidad === 'disponible' ? 'selected' : '' %>>Solo disponibles</option>
+      </select>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn btn--primary">Filtrar</button>
+      <a class="btn btn--outline" href="/panel">Limpiar</a>
+    </div>
+  </form>
+
+  <% if (items.length === 0) { %>
+    <div class="empty-state">
+      <h2>Sin resultados</h2>
+      <p>No hay materiales que coincidan con la búsqueda. Probá con otros filtros.</p>
+    </div>
+  <% } else { %>
+    <section class="cards-grid" data-grilla-materiales>
+      <% items.forEach((item) => { %>
+        <a class="item-card" href="/panel/item/<%= item.id %>" data-nombre="<%= item.nombre.toLowerCase() %>" data-categoria="<%= item.categoria %>">
+          <div class="item-card-media">
+            <% if (item.foto) { %>
+              <img src="<%= item.foto %>" alt="Foto de <%= item.nombre %>" loading="lazy" />
+            <% } else { %>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                <path d="m3.3 7 8.7 5 8.7-5" />
+                <path d="M12 22V12" />
+              </svg>
+            <% } %>
+          </div>
+          <div class="item-card-body">
+            <h3><%= item.nombre %></h3>
+            <p class="item-card-meta"><%= item.categoria %> · <%= item.ubicacion || 'Sin ubicación' %></p>
+            <div class="item-card-footer">
+              <span class="badge badge--estado badge--<%= item.estado %>"><%= ESTADOS_LABEL[item.estado] %></span>
+              <span class="item-cantidad <%= item.estado === 'disponible' && item.cantidad === 0 ? 'item-cantidad--critica' : '' %>">
+                <%= item.cantidad %> en stock
+              </span>
+            </div>
+          </div>
+        </a>
+      <% }) %>
     </section>
-  </main>
+  <% } %>
+</main>
+<script src="/js/panel.js" defer></script>
 </body>
 </html>

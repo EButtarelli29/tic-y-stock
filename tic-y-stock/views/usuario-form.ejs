@@ -1,0 +1,52 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/usuarios">← Volver a usuarios</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1><%= usuario ? 'Editar usuario' : 'Nuevo usuario' %></h1>
+      <p><%= usuario ? `Modificá la cuenta de ${usuario.nombre}.` : 'Creá una cuenta para un alumno o docente.' %></p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <form action="<%= usuario ? `/admin/usuarios/${usuario.id}/editar` : '/admin/usuarios/nuevo' %>" method="post" novalidate>
+      <div class="field">
+        <label for="nombre">Nombre completo</label>
+        <input id="nombre" name="nombre" type="text" value="<%= form.nombre %>" required autocomplete="off" />
+        <small class="field-error"><%= errores.nombre || '' %></small>
+      </div>
+      <div class="field">
+        <label for="email">Correo electrónico</label>
+        <input id="email" name="email" type="email" value="<%= form.email %>" required autocomplete="off" />
+        <small class="field-error"><%= errores.email || '' %></small>
+      </div>
+      <div class="field">
+        <label for="rol">Rol</label>
+        <select id="rol" name="rol" <%= usuario && usuario.rol === 'superusuario' && totalSuperusuarios === 1 ? 'disabled' : '' %>>
+          <% ROLES.forEach((r) => { %>
+            <option value="<%= r %>" <%= form.rol === r ? 'selected' : '' %>><%= r %></option>
+          <% }) %>
+        </select>
+        <% if (usuario && usuario.rol === 'superusuario' && totalSuperusuarios === 1) { %>
+          <small>Es la única cuenta de superusuario; no se puede cambiar su rol.</small>
+        <% } %>
+        <small class="field-error"><%= errores.rol || '' %></small>
+      </div>
+      <div class="field">
+        <label for="password"><%= usuario ? 'Nueva contraseña (opcional)' : 'Contraseña' %></label>
+        <input id="password" name="password" type="password" placeholder="<%= usuario ? 'Dejá en blanco para no cambiar' : 'Mín. 6 caracteres' %>" autocomplete="new-password" />
+        <small class="field-error"><%= errores.password || '' %></small>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--block">
+        <%= usuario ? 'Guardar cambios' : 'Crear usuario' %>
+      </button>
+    </form>
+  </section>
+</main>
+</body>
+</html>

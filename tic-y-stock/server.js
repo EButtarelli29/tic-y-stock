@@ -5,7 +5,10 @@ const session = require('express-session');
 const path = require('path');
 
 const authRoutes = require('./routes/auth.routes');
-const { requireAuth, requireSuperusuario } = require('./middleware/auth.middleware');
+const panelRoutes = require('./routes/panel.routes');
+const adminRoutes = require('./routes/admin.routes');
+const institucionalRoutes = require('./routes/institucional.routes');
+const { requireAuth } = require('./middleware/auth.middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,26 +34,20 @@ app.use(
   })
 );
 
+// Mensaje de un solo uso (flash) expuesto a todas las vistas
+app.use((req, res, next) => {
+  res.locals.mensaje = req.session.mensaje || null;
+  delete req.session.mensaje;
+  next();
+});
+
 app.use('/', authRoutes);
+app.use('/', panelRoutes);
+app.use('/admin', adminRoutes);
+app.use('/', institucionalRoutes);
 
 app.get('/', requireAuth, (req, res) => {
   res.redirect(req.session.user.rol === 'superusuario' ? '/admin' : '/panel');
-});
-
-app.get('/panel', requireAuth, (req, res) => {
-  res.render('panel', {
-    title: 'Panel del alumno',
-    user: req.session.user,
-    seccion: 'panel',
-  });
-});
-
-app.get('/admin', requireAuth, requireSuperusuario, (req, res) => {
-  res.render('admin', {
-    title: 'Panel del superusuario',
-    user: req.session.user,
-    seccion: 'admin',
-  });
 });
 
 app.use((req, res) => {

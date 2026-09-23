@@ -1,0 +1,113 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Inventario</h1>
+      <p>Alta, baja y modificación de los materiales del pañol.</p>
+    </div>
+    <a class="btn btn--primary" href="/admin/inventario/nuevo">+ Nuevo ítem</a>
+  </header>
+
+  <form class="filters-form" action="/admin/inventario" method="get" data-filtros-form>
+    <div class="field filters-search">
+      <label class="sr-only" for="buscar-inventario">Buscar</label>
+      <input id="buscar-inventario" name="q" type="search" placeholder="Buscar por nombre o categoría…" value="<%= filtros.q %>" data-busqueda />
+    </div>
+    <div class="field">
+      <label for="categoria">Categoría</label>
+      <select id="categoria" name="categoria">
+        <option value="">Todas</option>
+        <% categorias.forEach((c) => { %>
+          <option value="<%= c %>" <%= filtros.categoria === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado">
+        <option value="">Todos</option>
+        <% ESTADOS.forEach((e) => { %>
+          <option value="<%= e %>" <%= filtros.estado === e ? 'selected' : '' %>><%= e %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="ubicacion">Ubicación</label>
+      <select id="ubicacion" name="ubicacion">
+        <option value="">Todas</option>
+        <% ubicaciones.forEach((u) => { %>
+          <option value="<%= u %>" <%= filtros.ubicacion === u ? 'selected' : '' %>><%= u %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn btn--primary" data-boton-filtrar>Filtrar</button>
+      <a class="btn btn--outline" href="/admin/inventario">Limpiar</a>
+    </div>
+  </form>
+
+  <% if (items.length === 0) { %>
+    <div class="empty-state">
+      <h2>Sin resultados</h2>
+      <p>No hay ítems que coincidan con el filtro. Probá con otros criterios o cargá un ítem nuevo.</p>
+    </div>
+  <% } else { %>
+    <p class="muted list-count"><%= items.length %> ítem(s)</p>
+    <div class="table-wrap">
+      <table class="table" data-inventario-tabla>
+        <thead>
+          <tr>
+            <th>Foto</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Mín.</th>
+            <th>Estado</th>
+            <th>Ubicación</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach((item) => { %>
+            <tr data-fila-item>
+              <td class="table-cell-thumb">
+                <% if (item.foto) { %>
+                  <img src="<%= item.foto %>" alt="Foto de <%= item.nombre %>" class="thumb" />
+                <% } else { %>
+                  <span class="thumb thumb--empty" aria-hidden="true">—</span>
+                <% } %>
+              </td>
+              <td><%= item.nombre %></td>
+              <td><%= item.categoria %></td>
+              <td class="<%= item.cantidad <= item.cantidad_minima && item.estado !== 'baja' ? 'text-critical' : '' %>"><%= item.cantidad %></td>
+              <td><%= item.cantidad_minima %></td>
+              <td><span class="badge badge--estado badge--<%= item.estado %>"><%= item.estado %></span></td>
+              <td><%= item.ubicacion || '—' %></td>
+              <td class="table-actions">
+                <a class="btn btn--outline btn--sm" href="/admin/inventario/<%= item.id %>/editar">Editar</a>
+                <button type="button" class="btn btn--danger btn--sm" data-eliminar-item data-nombre="<%= item.nombre %>" data-url="/admin/inventario/<%= item.id %>/eliminar">Eliminar</button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</main>
+
+<div class="modal" data-modal-eliminar aria-hidden="true">
+  <div class="modal-backdrop" data-cerrar-modal></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <h2 id="modal-titulo">Eliminar ítem</h2>
+    <p id="modal-texto">¿Seguro que querés eliminar este ítem del inventario?</p>
+    <form class="modal-actions" method="post" data-form-eliminar>
+      <button type="button" class="btn btn--outline" data-cerrar-modal>Cancelar</button>
+      <button type="submit" class="btn btn--danger">Eliminar</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/inventario.js" defer></script>
+</body>
+</html>
