@@ -3,6 +3,7 @@ const Item = require('../models/item.model');
 const User = require('../models/user.model');
 const Alerta = require('../models/alerta.model');
 const Movimiento = require('../models/movimiento.model');
+const Solicitud = require('../models/solicitud.model');
 const { renderError } = require('../middleware/error.middleware');
 
 const ROLES = ['usuario', 'superusuario'];
@@ -12,7 +13,7 @@ const MAX_EMAIL = 190;
 const MIN_PASSWORD = 6;
 
 async function mostrarDashboard(req, res) {
-  const [totalItems, stockCritico, alertasActivas, alertasVencidas, alertas, ultimosMovimientos, totalSuperusuarios, prestamosActivos] =
+  const [totalItems, stockCritico, alertasActivas, alertasVencidas, alertas, ultimosMovimientos, totalSuperusuarios, prestamosActivos, solicitudesPendientes, solicitudes] =
     await Promise.all([
       Item.contar(),
       Item.stockCritico(),
@@ -22,6 +23,8 @@ async function mostrarDashboard(req, res) {
       Movimiento.ultimos(8),
       User.countByRol('superusuario'),
       Movimiento.contarPrestamosActivos(),
+      Solicitud.contarPendientes(),
+      Solicitud.listar({ estado: 'pendiente', limite: 8 }),
     ]);
 
   res.render('admin', {
@@ -37,6 +40,8 @@ async function mostrarDashboard(req, res) {
       ultimosMovimientos,
       totalSuperusuarios,
       prestamosActivos,
+      solicitudesPendientes,
+      solicitudes,
     },
   });
 }

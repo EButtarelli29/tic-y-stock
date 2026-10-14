@@ -1,0 +1,74 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Solicitudes</h1>
+      <p>Reservas de material y pedidos de compra de los alumnos. Aprobar una reserva aparta el stock y le deja su alerta de devolución.</p>
+    </div>
+    <p class="page-header-meta"><%= pendientes %> pendiente(s)</p>
+  </header>
+
+  <form class="filters-form" action="/admin/solicitudes" method="get">
+    <div class="field">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado">
+        <option value="">Todas</option>
+        <% Object.entries(ETIQUETAS_ESTADO).forEach(([valor, texto]) => { %>
+          <option value="<%= valor %>" <%= estado === valor ? 'selected' : '' %>><%= texto %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn btn--primary">Filtrar</button>
+      <a class="btn btn--outline" href="/admin/solicitudes">Limpiar</a>
+    </div>
+  </form>
+
+  <% if (solicitudes.length === 0) { %>
+    <div class="empty-state">
+      <h2>Sin solicitudes</h2>
+      <p><%= estado ? 'No hay solicitudes con ese estado.' : 'Todavía no hay pedidos de los alumnos.' %></p>
+    </div>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Alumno</th>
+            <th>Material / insumo</th>
+            <th>Cant.</th>
+            <th>Pedido</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% solicitudes.forEach((s) => { %>
+            <tr>
+              <td><span class="badge badge--mov badge--<%= s.tipo %>"><%= ETIQUETAS_TIPO[s.tipo] %></span></td>
+              <td><%= s.usuario_nombre %></td>
+              <td>
+                <% if (s.item_nombre) { %>
+                  <%= s.item_nombre %>
+                  <br /><small class="muted"><%= s.item_cantidad %> en stock</small>
+                <% } else { %>
+                  <span class="mov-nota"><%= s.descripcion %></span>
+                <% } %>
+              </td>
+              <td><%= s.cantidad %></td>
+              <td><%= new Date(s.fecha).toLocaleDateString('es-AR') %></td>
+              <td><span class="badge badge--estado badge--<%= s.estado %>"><%= ETIQUETAS_ESTADO[s.estado] %></span></td>
+              <td class="table-actions">
+                <a class="btn btn--outline btn--sm" href="/admin/solicitudes/<%= s.id %>"><%= s.estado === 'pendiente' ? 'Resolver' : 'Ver' %></a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</main>
+</body>
+</html>

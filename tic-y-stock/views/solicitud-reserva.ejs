@@ -1,0 +1,62 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/panel/mis-solicitudes">← Volver a mis solicitudes</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Reservar material</h1>
+      <p>Pedí material del pañol. El responsable del taller revisa la reserva y, al aprobarla, el stock queda apartado a tu nombre.</p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <%# Si el ítem se quedó sin stock entre la carga y el envío, desaparece del
+        `<select>`; el error tiene que verse igual, no quedar tapado por la lista. %>
+    <% if (items.length === 0) { %>
+      <div class="empty-state">
+        <h2><%= errores.id_item ? 'No se pudo reservar' : 'No hay material disponible' %></h2>
+        <p>
+          <%= errores.id_item || 'Ahora mismo no hay materiales con stock para reservar. Si falta un insumo, podés pedir su compra.' %>
+        </p>
+        <a class="btn btn--outline" href="/panel/solicitudes/compra">Pedir una compra</a>
+      </div>
+    <% } else { %>
+      <form action="/panel/solicitudes/nueva" method="post" novalidate>
+        <div class="field">
+          <label for="id_item">Material</label>
+          <select id="id_item" name="id_item" data-item-reserva required>
+            <option value="">Elegí el material…</option>
+            <% items.forEach((i) => { %>
+              <option value="<%= i.id %>" data-stock="<%= i.cantidad %>" <%= form.id_item === String(i.id) ? 'selected' : '' %>>
+                <%= i.nombre %> — <%= i.cantidad %> en stock (<%= i.categoria %>)
+              </option>
+            <% }) %>
+          </select>
+          <small class="field-hint" data-stock-disponible></small>
+          <small class="field-error"><%= errores.id_item || '' %></small>
+        </div>
+
+        <div class="field">
+          <label for="cantidad">Cantidad</label>
+          <input id="cantidad" name="cantidad" type="number" min="1" step="1" value="<%= form.cantidad %>" data-cantidad-reserva required />
+          <small class="field-error"><%= errores.cantidad || '' %></small>
+        </div>
+
+        <div class="field">
+          <label for="descripcion">Para qué lo necesitás (opcional)</label>
+          <textarea id="descripcion" name="descripcion" rows="3" maxlength="500" placeholder="Para qué lo vas a usar, para cuándo lo necesitás…"><%= form.descripcion %></textarea>
+          <small class="field-error"><%= errores.descripcion || '' %></small>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Enviar reserva</button>
+        <p class="muted">¿Lo que falta no está en la lista? <a href="/panel/solicitudes/compra">Pedí una compra</a>.</p>
+      </form>
+    <% } %>
+  </section>
+</main>
+<script src="/js/solicitudes.js" defer></script>
+</body>
+</html>

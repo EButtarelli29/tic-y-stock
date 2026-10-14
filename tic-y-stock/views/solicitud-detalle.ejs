@@ -1,0 +1,105 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/solicitudes">← Volver a solicitudes</a>
+
+  <div class="detail-grid">
+    <section class="card panel-block">
+      <div class="card-header">
+        <h2>Solicitud #<%= solicitud.id %></h2>
+        <p><%= ETIQUETAS_TIPO[solicitud.tipo] %> de <%= solicitud.usuario_nombre %> (<%= solicitud.usuario_email %>)</p>
+      </div>
+
+      <span class="badge badge--estado badge--<%= solicitud.estado %>"><%= ETIQUETAS_ESTADO[solicitud.estado] %></span>
+
+      <dl class="info-list">
+        <div>
+          <dt>Pedido</dt>
+          <dd><%= new Date(solicitud.fecha).toLocaleString('es-AR') %></dd>
+        </div>
+        <div>
+          <dt>Cantidad</dt>
+          <dd><%= solicitud.cantidad %></dd>
+        </div>
+        <% if (solicitud.item_nombre) { %>
+          <div>
+            <dt>Material</dt>
+            <dd>
+              <a href="/admin/inventario/<%= solicitud.id_item %>/editar"><%= solicitud.item_nombre %></a>
+              <br /><small class="muted"><%= solicitud.item_cantidad %> en stock</small>
+            </dd>
+          </div>
+        <% } %>
+        <div>
+          <dt>Detalle</dt>
+          <dd><%= solicitud.descripcion || '—' %></dd>
+        </div>
+        <% if (solicitud.estado !== 'pendiente') { %>
+          <div>
+            <dt>Resuelta</dt>
+            <dd>
+              <%= solicitud.fecha_resolucion ? new Date(solicitud.fecha_resolucion).toLocaleString('es-AR') : '—' %>
+              <% if (solicitud.resuelta_por_nombre) { %>por <%= solicitud.resuelta_por_nombre %><% } %>
+            </dd>
+          </div>
+          <% if (solicitud.respuesta) { %>
+            <div>
+              <dt>Respuesta</dt>
+              <dd><%= solicitud.respuesta %></dd>
+            </div>
+          <% } %>
+          <% if (solicitud.id_movimiento) { %>
+            <div>
+              <dt>Retiro</dt>
+              <dd>Movimiento #<%= solicitud.id_movimiento %></dd>
+            </div>
+          <% } %>
+        <% } %>
+      </dl>
+    </section>
+
+    <section class="card panel-block">
+      <%# El error se muestra siempre, incluso cuando la solicitud ya no está
+          pendiente: resolver una solicitud que otra pestaña ya cerró tiene que
+          explicarse, no taparse con la pantalla de "ya resuelta". %>
+      <% const mensajesError = Object.values(errores).filter(Boolean); %>
+      <% if (mensajesError.length > 0) { %>
+        <div class="alert alert--error" role="alert">
+          <% mensajesError.forEach((m) => { %><p><%= m %></p><% }) %>
+        </div>
+      <% } %>
+
+      <% if (solicitud.estado === 'pendiente') { %>
+        <div class="card-header">
+          <h2><%= solicitud.tipo === 'reserva' ? 'Resolver la reserva' : 'Resolver la compra' %></h2>
+          <p>
+            <% if (solicitud.tipo === 'reserva') { %>
+              Aprobar aparta <%= solicitud.cantidad %> unidad(es) del pañol a nombre del alumno y le deja su alerta de devolución.
+            <% } else { %>
+              Aprobar cierra el pedido. El insumo nuevo se carga después en el inventario.
+            <% } %>
+          </p>
+        </div>
+
+        <form action="/admin/solicitudes/<%= solicitud.id %>" method="post" novalidate>
+          <div class="field">
+            <label for="respuesta">Respuesta al alumno (opcional)</label>
+            <textarea id="respuesta" name="respuesta" rows="3" maxlength="500" placeholder="Por qué se rechaza, para cuándo, aclaraciones…"><%= form.respuesta %></textarea>
+            <small class="field-error"><%= errores.respuesta || '' %></small>
+          </div>
+          <div class="filters-actions">
+            <button type="submit" class="btn btn--primary" name="accion" value="aprobar">Aprobar</button>
+            <button type="submit" class="btn btn--outline" name="accion" value="rechazar">Rechazar</button>
+          </div>
+        </form>
+      <% } else { %>
+        <div class="card-header">
+          <h2>Solicitud resuelta</h2>
+          <p>Ya fue <%= ETIQUETAS_ESTADO[solicitud.estado].toLowerCase() %> y no se puede volver a resolver.</p>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</main>
+</body>
+</html>

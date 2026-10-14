@@ -2,6 +2,7 @@ const router = require('express').Router();
 const admin = require('../controllers/admin.controller');
 const item = require('../controllers/item.controller');
 const movimiento = require('../controllers/movimiento.controller');
+const solicitud = require('../controllers/solicitud.controller');
 const { requireAuth, requireSuperusuario } = require('../middleware/auth.middleware');
 const { subirFoto } = require('../middleware/upload.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
@@ -34,6 +35,11 @@ router.get('/movimientos/retiro', asyncHandler(movimiento.mostrarRetiro));
 router.post('/movimientos/retiro', asyncHandler(movimiento.crearRetiro));
 router.get('/movimientos/devolucion', asyncHandler(movimiento.mostrarDevolucion));
 router.post('/movimientos/devolucion', asyncHandler(movimiento.crearDevolucion));
+
+/* Solicitudes de reserva y compra (F8 — T-45, T-46) */
+router.get('/solicitudes', asyncHandler(solicitud.listar));
+router.get('/solicitudes/:id', asyncHandler(solicitud.mostrarDetalle));
+router.post('/solicitudes/:id', asyncHandler(solicitud.resolverSolicitud));
 
 /* Gestión de usuarios (T-49) */
 router.get('/usuarios', asyncHandler(admin.mostrarUsuarios));

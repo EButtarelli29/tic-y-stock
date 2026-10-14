@@ -34,6 +34,11 @@
       <a class="stat-link" href="/admin/alertas"><%= resumen.alertasVencidas %> vencida(s)</a>
     </div>
     <div class="stat-card">
+      <span class="stat-label">Solicitudes pendientes</span>
+      <strong class="stat-value"><%= resumen.solicitudesPendientes %></strong>
+      <a class="stat-link" href="/admin/solicitudes?estado=pendiente">Ver reservas y compras</a>
+    </div>
+    <div class="stat-card">
       <span class="stat-label">Cuentas de superusuario</span>
       <strong class="stat-value"><%= resumen.totalSuperusuarios %></strong>
       <a class="stat-link" href="/admin/usuarios">Gestionar usuarios</a>
@@ -75,6 +80,47 @@
                 <% } %>
               </td>
               <td><a class="btn btn--outline btn--sm" href="/admin/movimientos/devolucion?retiro=<%= a.id_movimiento %>">Devolver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (resumen.solicitudesPendientes > 0) { %>
+  <section class="card panel-block">
+    <div class="card-header panel-block-header">
+      <h2>Solicitudes por resolver</h2>
+      <a class="btn btn--outline btn--sm" href="/admin/solicitudes?estado=pendiente">Ver todas</a>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Alumno</th>
+            <th>Material / insumo</th>
+            <th>Cant.</th>
+            <th>Pedido</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% resumen.solicitudes.forEach((s) => { %>
+            <tr>
+              <td><span class="badge badge--mov badge--<%= s.tipo %>"><%= s.tipo === 'reserva' ? 'Reserva' : 'Compra' %></span></td>
+              <td><%= s.usuario_nombre %></td>
+              <td>
+                <% if (s.item_nombre) { %>
+                  <%= s.item_nombre %>
+                <% } else { %>
+                  <span class="mov-nota"><%= s.descripcion %></span>
+                <% } %>
+              </td>
+              <td><%= s.cantidad %></td>
+              <td><%= new Date(s.fecha).toLocaleDateString('es-AR') %></td>
+              <td><a class="btn btn--outline btn--sm" href="/admin/solicitudes/<%= s.id %>">Resolver</a></td>
             </tr>
           <% }) %>
         </tbody>

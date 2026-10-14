@@ -615,6 +615,33 @@ textarea {
   color: var(--destructive);
 }
 
+/* F8: estados de una solicitud (reserva/compra) */
+.badge--pendiente {
+  background: rgba(230, 126, 34, 0.14);
+  color: #b45309;
+}
+
+.badge--aprobada {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.badge--rechazada {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* F8: tipo de solicitud */
+.badge--reserva {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.badge--compra {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
 /* Movimientos (F5) */
 .mov-nota {
   max-width: 18rem;

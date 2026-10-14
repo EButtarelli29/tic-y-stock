@@ -62,7 +62,7 @@ Fuente: tareas T-08 a T-15 del Product Backlog (Actividad 17) y PMV (Actividad 1
 - [x] **T-22** Apartado institucional `/institucional` (F10)
 - [x] **T-23** Formulario de contacto `/contacto` (almacena consultas)
 
-## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos, escaneo y alertas
+## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos, escaneo, alertas y solicitudes
 
 ### F5 — Registro de movimientos (T-28 a T-32)
 
@@ -248,8 +248,56 @@ muestra el contador de activas (y cuántas están vencidas) y la página
 `/admin/alertas` lista todas, con un enlace directo para registrar la devolución de
 cada una.
 
-Fuera de alcance en esta etapa: reservas/solicitudes (F8) y la exportación del
-historial (T-50).
+### F8 — Reservas y solicitudes de compra (T-42 a T-46)
+
+Fuente: Sprint 6 "Formularios" del Product Backlog (T-42 a T-46). Es la primera vez que el
+**alumno escribe** sobre el inventario: hasta F7 todo lo registraba el docente. Acá el
+alumno **pide** y el docente **resuelve**.
+
+- [x] **T-42** Formulario de reserva de material disponible (`/panel/solicitudes/nueva`)
+- [x] **T-43** Lógica de reserva y actualización de disponibilidad
+- [x] **T-44** Formulario de solicitud de compra de un insumo nuevo (`/panel/solicitudes/compra`)
+- [x] **T-45** Vista de solicitudes pendientes en el panel del superusuario (`/admin/solicitudes`)
+- [x] **T-46** Aprobación o rechazo de solicitudes por el superusuario
+
+#### Los dos tipos de solicitud
+
+| Tipo | Qué es | Qué hace al aprobarse |
+| --- | --- | --- |
+| `reserva` | el alumno pide llevarse N unidades de un ítem que **ya existe** | **aparta el material**: se registra el retiro (F5) y queda su alerta (F7) |
+| `compra` | el alumno pide que se **compre** un insumo que no está | cierra la solicitud; el insumo nuevo lo carga el docente después a mano |
+
+Una solicitud de compra **no tiene ítem** (`id_item` queda `NULL`): todavía no existe. Por
+eso la reserva es la única que arrastra el stock.
+
+#### Aprobar una reserva aparta el material de verdad
+
+"Actualizar la disponibilidad" (T-43) se resolvió reusando el retiro de F5, no con un
+estado nuevo. Aprobar una reserva **descuenta el stock, deja el ítem `prestado` y crea su
+alerta de devolución**, todo en la misma transacción que marca la solicitud como
+`aprobada`. La solicitud guarda el `id_movimiento` que generó (`UNIQUE`), que es el hilo
+para auditar de dónde salió cada préstamo. Así una sola acción del docente no deja dos
+verdades: o queda todo (solicitud aprobada + retiro + alerta) o no queda nada.
+
+La transacción toma el ítem con `SELECT ... FOR UPDATE` y verifica que la solicitud siga
+`pendiente`, así que **no se puede descontar dos veces** (doble clic o dos pestañas) ni
+dejar el stock negativo. Si no hay stock suficiente, la aprobación **no es un error**:
+vuelve al formulario con el motivo y la solicitud sigue `pendiente`.
+
+#### Quién ve qué
+
+| Ruta | Rol | Para qué |
+| --- | --- | --- |
+| `/panel/solicitudes/nueva` | alumno | pedir una reserva (también se entra desde el detalle de un ítem) |
+| `/panel/solicitudes/compra` | alumno | pedir la compra de un insumo nuevo |
+| `/panel/mis-solicitudes` | alumno | seguir el estado de sus pedidos |
+| `/admin/solicitudes` | superusuario | listar y filtrar las solicitudes por estado |
+| `/admin/solicitudes/:id` | superusuario | resolver (aprobar / rechazar) con una respuesta |
+
+El dashboard de `/admin` muestra las solicitudes pendientes en una tarjeta con enlace
+directo. Las notificaciones propiamente dichas quedan fuera de alcance.
+
+Fuera de alcance en esta etapa: la exportación del historial (T-50).
 
 ## Puesta en marcha
 
@@ -324,11 +372,15 @@ ya existe y hay que actualizar, hay migraciones numeradas en `db/`:
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-02-movimientos.sql"
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-03-codigos.sql"
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-04-alertas.sql"
+& 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-05-solicitudes.sql"
 ```
 
 `migracion-03-codigos.sql` agregó columnas (F6); `migracion-04-alertas.sql` es **de
 datos**: le crea la alerta a los préstamos que ya estaban abiertos cuando se empezó a
-usar F7, así el panel no arranca con material afuera y cero avisos.
+usar F7, así el panel no arranca con material afuera y cero avisos. `migracion-05-solicitudes.sql`
+(F8) le agrega a `solicitudes` las columnas de resolución (`cantidad`, `respuesta`,
+`id_movimiento`, `resuelta_por`, `fecha_resolucion`) con sus claves foráneas y el `CHECK`
+que ata el tipo con el ítem: es la que convierte la tabla de F1 en la que usa F8.
 
 Cada migración es idempotente (se puede correr más de una vez) y avisa por pantalla si
 encuentra datos que la van a bloquear, sin tocar nada.
@@ -344,14 +396,15 @@ node "$env:LOCALAPPDATA\Temp\opencode\smoke-test.js"                            
 node "$env:LOCALAPPDATA\Temp\opencode\test-f5.js"                                             # 134 chequeos (F5)
 node "$env:LOCALAPPDATA\Temp\opencode\test-f6.js"                                             # 84 chequeos (F6)
 node "$env:LOCALAPPDATA\Temp\opencode\test-f7.js"                                             # 26 chequeos (F7)
+node "$env:LOCALAPPDATA\Temp\opencode\test-f8.js"                                             # 68 chequeos (F8)
 ```
 
 Recorren público, alumno y superusuario, y borran los datos que crean. Están fuera del
 repo porque los de Node hardcodean el `path` de MySQL de esta máquina; si los agregás
 al repo, acordá antes el `path` de XAMPP o parametrizalo. La verificación visual se hizo
-con `revisa-html-f5.js`, `revisa-html-f6.js` y `revisa-html-f7.js`, que chequean el HTML
-renderizado (clases presentes en el CSS, marcado balanceado, sin `undefined`) porque no
-había forma de tomar capturas.
+con `revisa-html-f5.js`, `revisa-html-f6.js`, `revisa-html-f7.js` y `revisa-html-f8.js`,
+que chequean el HTML renderizado (clases presentes en el CSS, marcado balanceado, sin
+`undefined`) porque no había forma de tomar capturas.
 
 ### Configuración (variables de entorno, archivo `.env`)
 
@@ -375,21 +428,22 @@ Copiá `.env.example` a `.env` y ajustá lo que necesites. `.env` está en `.git
 tic-y-stock/
 ├── server.js                 # Entrada: Express, sesiones, rutas, vistas
 ├── routes/                   # Capa de rutas: auth, panel, admin, institucional, api (F6)
-├── controllers/              # Capa de negocio: auth, panel, item, movimiento, admin, institucional
+├── controllers/              # Capa de negocio: auth, panel, item, movimiento, solicitud, admin, institucional
 ├── middleware/               # auth, upload (multer), rate-limit, error
-├── models/                   # Capa de datos: db.js, user, item, movimiento, alerta, contacto
+├── models/                   # Capa de datos: db.js, user, item, movimiento, alerta, solicitud, contacto
 ├── db/
 │   ├── schema.sql            # Esquema MySQL (6 tablas con claves foráneas)
 │   ├── migracion-01-fks.sql  # Agrega las claves foráneas a una base ya instalada
 │   ├── migracion-02-movimientos.sql  # cantidad, vínculo devolución→retro y sus restricciones
 │   ├── migracion-03-codigos.sql      # F6: items.codigo_barras (UNIQUE) + backfill
-│   └── migracion-04-alertas.sql      # F7: alerta para los préstamos que ya estaban abiertos
+│   ├── migracion-04-alertas.sql      # F7: alerta para los préstamos que ya estaban abiertos
+│   └── migracion-05-solicitudes.sql  # F8: columnas de resolución de las solicitudes
 ├── scripts/                  # crear-superusuario.js (db:seed), datos-demo.js (db:demo)
 ├── views/                    # Plantillas EJS + partials/: head, nav
 ├── .env.example              # Plantilla de configuración (copiar a .env)
 ├── public/
 │   ├── css/styles.css        # Estilos del frontend (incluye print de etiquetas)
-│   ├── js/                   # Validaciones de formularios, filtros y escaneo (escaner.js, etiquetas.js)
+│   ├── js/                   # Validaciones de formularios, filtros, escaneo y solicitudes (escaner.js, etiquetas.js, solicitudes.js)
 │   ├── vendor/               # F6: ZXing y JsBarcode vendorizados (sin CDN) — ver su README
 │   └── uploads/items/        # Fotos de insumos (multer, ignorada por git)
 ```
@@ -421,11 +475,14 @@ error en `detalle`, no en `mensaje`, que es el mensaje flash del navbar.
 
 ## Roles
 
-- **usuario** — alumno: se crea por registro público. Accede a `/panel` (catálogo con filtros y detalle)
-  y a `/panel/mis-prestamos` (sus préstamos activos y su historial, solo lectura).
+- **usuario** — alumno: se crea por registro público. Accede a `/panel` (catálogo con filtros y detalle),
+  a `/panel/mis-prestamos` (sus préstamos activos y su historial, solo lectura) y a F8: pide reservas
+  (`/panel/solicitudes/nueva`) y compras (`/panel/solicitudes/compra`), y sigue sus pedidos en
+  `/panel/mis-solicitudes`.
 - **superusuario** — docente / Jefe de Taller: se crea solo con `npm run db:seed` (no hay registro público).
   Accede a `/admin`: dashboard, inventario (CRUD), movimientos (retiros y devoluciones), alertas de
-  devolución (`/admin/alertas`) y gestión de usuarios.
+  devolución (`/admin/alertas`), solicitudes de los alumnos (`/admin/solicitudes`, aprobar/rechazar) y
+  gestión de usuarios.
 
 ## Base de datos
 
@@ -438,6 +495,8 @@ valor histórico:
 | `movimientos.id_retiro` (a `movimientos.id`) | `CASCADE` | la devolución cuelga del retiro que cierra |
 | `alertas.id_movimiento` | `CASCADE` | la alerta cuelga del movimiento |
 | `solicitudes.id_usuario`, `solicitudes.id_item` | `RESTRICT` | una solicitud es un registro administrativo: hay que resolverla a mano, no se pierde sola |
+| `solicitudes.id_movimiento` (F8) | `SET NULL` | el retiro que generó una reserva aprobada; si el movimiento se borra, la solicitud queda como registro |
+| `solicitudes.resuelta_por` (F8) | `SET NULL` | quién la aprobó o rechazó; si se borra esa cuenta, la resolución no se pierde |
 
 Cuando un `RESTRICT` bloquea un borrado, el `errorHandler` responde **409** con un
 mensaje en vez de un 500 genérico.
@@ -450,6 +509,13 @@ F7 no agrega columnas: usa la tabla `alertas` que existe desde F1. Cada fila cue
 un retiro (`id_movimiento`), nace `activa` con una `fecha_vencimiento` y pasa a
 `resuelta` al devolverse el material. `db/migracion-04-alertas.sql` es una migración de
 datos que le crea la alerta a los préstamos que ya estaban abiertos.
+
+F8 sí agrega columnas a `solicitudes`: `cantidad` (cuántas unidades se piden),
+`respuesta` (lo que contesta el docente), `id_movimiento` (el retiro que generó la
+reserva aprobada, `UNIQUE`), `resuelta_por` y `fecha_resolucion`. Un `CHECK`
+(`chk_solicitudes_reserva_item`) exige que una `reserva` tenga `id_item` y que una
+`compra` no lo tenga, así el tipo y el ítem no se contradicen. Lo aplica
+`db/migracion-05-solicitudes.sql`.
 
 Ojo: el MySQL de XAMPP no trae `STRICT_TRANS_TABLES`, así que un `INSERT` con un texto
 más largo que el `VARCHAR` se **trunca en silencio**. Por eso todos los formularios
@@ -468,6 +534,11 @@ Los errores de validación (no hay stock, el préstamo ya fue devuelto) **no** s
 excepciones: son el camino normal de un formulario mal completado. Por eso
 `registrarRetiro` y `registrarDevolucion` devuelven `{ ok, errores }` y el controlador los
 pinta en el formulario.
+
+La aprobación de una reserva (F8) entra en esa misma transacción: adentro registra el
+retiro **y** marca la solicitud como `aprobada`. Si el retiro no puede (no hay stock), la
+solicitud no se aprueba y sigue `pendiente`; nunca queda una aprobada sin su movimiento ni
+un movimiento sin su solicitud aprobada.
 
 La conciliación se puede auditar con una consulta: `SUM(retiros) - SUM(devoluciones)` son
 las unidades que están afuera del pañol, así que `items.cantidad + delta` es el total que

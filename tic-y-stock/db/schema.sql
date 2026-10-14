@@ -91,20 +91,41 @@ CREATE TABLE IF NOT EXISTS alertas (
 -- Una solicitud es un registro administrativo: si el usuario o el ítem existen,
 -- la solicitud NO se borra sola (RESTRICT). Hay que resolverla a mano para no
 -- perder el historial de lo pedido.
+--
+-- F8 (T-42 a T-46): la solicitud se cierra con `estado`, `respuesta`,
+-- `resuelta_por` y `fecha_resolucion`. Cuando es una reserva aprobada, el retiro
+-- que la materializó queda apuntado en `id_movimiento` (UNIQUE: un retiro no
+-- puede nacer de dos solicitudes). Una compra (`id_item NULL`) solo se cierra
+-- administrativamente: el insumo nuevo lo carga el docente en el inventario.
 CREATE TABLE IF NOT EXISTS solicitudes (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_usuario INT UNSIGNED NOT NULL,
   id_item INT UNSIGNED NULL,
   tipo ENUM('reserva', 'compra') NOT NULL,
   estado ENUM('pendiente', 'aprobada', 'rechazada') NOT NULL DEFAULT 'pendiente',
+  cantidad INT UNSIGNED NOT NULL DEFAULT 1,
   descripcion VARCHAR(500) NULL,
+  respuesta VARCHAR(500) NULL,
+  id_movimiento INT UNSIGNED NULL,
+  resuelta_por INT UNSIGNED NULL,
   fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_resolucion TIMESTAMP NULL,
   INDEX idx_solicitudes_usuario (id_usuario),
   INDEX idx_solicitudes_estado (estado),
+  UNIQUE KEY uq_solicitudes_movimiento (id_movimiento),
   CONSTRAINT fk_solicitudes_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_solicitudes_item FOREIGN KEY (id_item) REFERENCES items (id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_solicitudes_movimiento FOREIGN KEY (id_movimiento) REFERENCES movimientos (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_solicitudes_resuelta_por FOREIGN KEY (resuelta_por) REFERENCES usuarios (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  -- Una reserva siempre apunta a un ítem existente; una compra puede ser de un
+  -- insumo que todavía no está cargado, y por eso `id_item` puede ser NULL.
+  CONSTRAINT chk_solicitudes_reserva_item CHECK (
+    tipo = 'compra' OR (tipo = 'reserva' AND id_item IS NOT NULL)
+  )
 ) ENGINE=InnoDB;
 
 -- Soporte para el formulario de contacto (T-23)

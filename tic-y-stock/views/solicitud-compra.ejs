@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/panel/mis-solicitudes">← Volver a mis solicitudes</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Pedir una compra</h1>
+      <p>¿Falta un insumo que no está en el inventario? Describí qué se necesita y el responsable del taller evalúa la compra.</p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <form action="/panel/solicitudes/compra" method="post" novalidate>
+      <div class="field">
+        <label for="cantidad">Cantidad</label>
+        <input id="cantidad" name="cantidad" type="number" min="1" step="1" value="<%= form.cantidad %>" required />
+        <small class="field-error"><%= errores.cantidad || '' %></small>
+      </div>
+
+      <div class="field">
+        <label for="descripcion">Qué hace falta</label>
+        <textarea id="descripcion" name="descripcion" rows="4" maxlength="500" placeholder="Ej.: 2 rollos de estaño para soldar de 1 mm, para las prácticas de electrónica." required><%= form.descripcion %></textarea>
+        <small class="field-hint">Marca, modelo, medida y para qué se usa.</small>
+        <small class="field-error"><%= errores.descripcion || '' %></small>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--block">Enviar solicitud</button>
+    </form>
+  </section>
+</main>
+</body>
+</html>

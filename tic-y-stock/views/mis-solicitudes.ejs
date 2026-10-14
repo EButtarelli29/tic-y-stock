@@ -1,0 +1,58 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Mis solicitudes</h1>
+      <p>Lo que pediste al taller: reservas de material disponible y compras de insumos nuevos.</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn--primary" href="/panel/solicitudes/nueva">Reservar material</a>
+      <a class="btn btn--outline" href="/panel/solicitudes/compra">Pedir una compra</a>
+    </div>
+  </header>
+
+  <% if (solicitudes.length === 0) { %>
+    <div class="empty-state">
+      <h2>Todavía no hiciste ninguna solicitud</h2>
+      <p>Podés reservar material que esté disponible en el pañol o pedir la compra de un insumo que falte.</p>
+      <a class="btn btn--outline" href="/panel">Ver los materiales disponibles</a>
+    </div>
+  <% } else { %>
+    <p class="muted list-count"><%= solicitudes.length %> solicitud(es) · <%= pendientes %> pendiente(s)</p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Material / insumo</th>
+            <th>Cant.</th>
+            <th>Pedido</th>
+            <th>Estado</th>
+            <th>Respuesta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% solicitudes.forEach((s) => { %>
+            <tr>
+              <td><span class="badge badge--mov badge--<%= s.tipo %>"><%= ETIQUETAS_TIPO[s.tipo] %></span></td>
+              <td>
+                <% if (s.item_nombre) { %>
+                  <%= s.item_nombre %>
+                <% } else { %>
+                  <span class="mov-nota"><%= s.descripcion %></span>
+                <% } %>
+              </td>
+              <td><%= s.cantidad %></td>
+              <td><%= new Date(s.fecha).toLocaleDateString('es-AR') %></td>
+              <td><span class="badge badge--estado badge--<%= s.estado %>"><%= ETIQUETAS_ESTADO[s.estado] %></span></td>
+              <td class="mov-nota"><%= s.respuesta || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</main>
+</body>
+</html>

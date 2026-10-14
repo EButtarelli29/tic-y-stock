@@ -53,6 +53,12 @@
       </dl>
 
       <p class="muted">En caso de necesitar este material, consultá con el responsable del pañol (docente o Jefe de Taller).</p>
+
+      <% if (item.estado === 'disponible' && item.cantidad > 0) { %>
+        <div class="page-header-actions">
+          <a class="btn btn--primary" href="/panel/solicitudes/nueva?item=<%= item.id %>">Reservar este material</a>
+        </div>
+      <% } %>
     </div>
   </div>
 </main>

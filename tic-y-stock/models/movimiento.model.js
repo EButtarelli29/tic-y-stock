@@ -114,52 +114,63 @@ async function contarConFiltros(filtros = {}) {
  * -- --movimientos`), que necesita un historial con fechas repartidas. La
  * aplicación nunca la manda: un retiro se anota cuando se registra.
  */
-async function registrarRetiro({ id_item, id_usuario, cantidad, observaciones = '', codigo_escaneado = '', fecha_hora = null }) {
-  return db.withTransaction(async (conn) => {
-    // FOR UPDATE: bloquea la fila del ítem hasta que termine la transacción, así
-    // dos retiros simultáneos del mismo material no pueden leer el mismo stock y
-    // ambos "pasar". Es la garantía de que `items.cantidad` nunca queda negativa.
-    const [items] = await conn.query(
-      'SELECT id, nombre, cantidad, estado FROM items WHERE id = ? FOR UPDATE',
-      [id_item]
-    );
-    const item = items[0];
+async function registrarRetiro(datos) {
+  return db.withTransaction((conn) => registrarRetiroEnTx(conn, datos));
+}
 
-    if (!item) {
-      return { ok: false, errores: { id_item: 'El ítem seleccionado no existe.' } };
-    }
-    if (item.estado === 'baja') {
-      return { ok: false, errores: { id_item: `"${item.nombre}" está dado de baja: no se puede retirar.` } };
-    }
-    if (cantidad < 1) {
-      return { ok: false, errores: { cantidad: 'La cantidad debe ser al menos 1.' } };
-    }
-    if (cantidad > item.cantidad) {
-      return {
-        ok: false,
-        errores: {
-          cantidad: `No hay stock suficiente de "${item.nombre}": quedan ${item.cantidad} unidad(es) en el pañol.`,
-        },
-      };
-    }
+/**
+ * El cuerpo del retiro, sobre una conexión que ya está en transacción.
+ *
+ * Está separado de `registrarRetiro` para que la aprobación de una reserva
+ * (F8 — T-43) pueda registrar el retiro y marcar la solicitud en la MISMA
+ * transacción. Si fueran dos operaciones sueltas, una solicitud que quedó
+ * `pendiente` después de un retiro ya hecho podría aprobarse de nuevo y
+ * descontar el stock dos veces.
+ */
+async function registrarRetiroEnTx(conn, { id_item, id_usuario, cantidad, observaciones = '', codigo_escaneado = '', fecha_hora = null }) {
+  // FOR UPDATE: bloquea la fila del ítem hasta que termine la transacción, así
+  // dos retiros simultáneos del mismo material no pueden leer el mismo stock y
+  // ambos "pasar". Es la garantía de que `items.cantidad` nunca queda negativa.
+  const [items] = await conn.query(
+    'SELECT id, nombre, cantidad, estado FROM items WHERE id = ? FOR UPDATE',
+    [id_item]
+  );
+  const item = items[0];
 
-    const [insercion] = await conn.query(
-      `INSERT INTO movimientos (id_item, id_usuario, tipo, cantidad, observaciones, codigo_escaneado, fecha_hora)
-       VALUES (?, ?, 'retiro', ?, ?, ?, ${fecha_hora ? '?' : 'DEFAULT'})`,
-      fecha_hora
-        ? [id_item, id_usuario, cantidad, observaciones || null, codigo_escaneado || null, fecha_hora]
-        : [id_item, id_usuario, cantidad, observaciones || null, codigo_escaneado || null]
-    );
-    await conn.query('UPDATE items SET cantidad = cantidad - ? WHERE id = ?', [cantidad, id_item]);
-    // En la misma transacción, para que el estado no pueda quedar diciendo
-    // "disponible" con material recién entregado.
-    await recalcularEstado(id_item, conn);
-    // F7 (T-39): el retiro deja su alerta de devolución con la fecha límite.
-    // Misma transacción: no puede haber material afuera sin su alerta.
-    await Alerta.crearParaRetiro(conn, { idMovimiento: insercion.insertId, fechaHora: fecha_hora });
+  if (!item) {
+    return { ok: false, errores: { id_item: 'El ítem seleccionado no existe.' } };
+  }
+  if (item.estado === 'baja') {
+    return { ok: false, errores: { id_item: `"${item.nombre}" está dado de baja: no se puede retirar.` } };
+  }
+  if (cantidad < 1) {
+    return { ok: false, errores: { cantidad: 'La cantidad debe ser al menos 1.' } };
+  }
+  if (cantidad > item.cantidad) {
+    return {
+      ok: false,
+      errores: {
+        cantidad: `No hay stock suficiente de "${item.nombre}": quedan ${item.cantidad} unidad(es) en el pañol.`,
+      },
+    };
+  }
 
-    return { ok: true, id: insercion.insertId, item_nombre: item.nombre, cantidad };
-  });
+  const [insercion] = await conn.query(
+    `INSERT INTO movimientos (id_item, id_usuario, tipo, cantidad, observaciones, codigo_escaneado, fecha_hora)
+     VALUES (?, ?, 'retiro', ?, ?, ?, ${fecha_hora ? '?' : 'DEFAULT'})`,
+    fecha_hora
+      ? [id_item, id_usuario, cantidad, observaciones || null, codigo_escaneado || null, fecha_hora]
+      : [id_item, id_usuario, cantidad, observaciones || null, codigo_escaneado || null]
+  );
+  await conn.query('UPDATE items SET cantidad = cantidad - ? WHERE id = ?', [cantidad, id_item]);
+  // En la misma transacción, para que el estado no pueda quedar diciendo
+  // "disponible" con material recién entregado.
+  await recalcularEstado(id_item, conn);
+  // F7 (T-39): el retiro deja su alerta de devolución con la fecha límite.
+  // Misma transacción: no puede haber material afuera sin su alerta.
+  await Alerta.crearParaRetiro(conn, { idMovimiento: insercion.insertId, fechaHora: fecha_hora });
+
+  return { ok: true, id: insercion.insertId, item_nombre: item.nombre, cantidad };
 }
 
 /**
@@ -415,6 +426,7 @@ module.exports = {
   listar,
   contarConFiltros,
   registrarRetiro,
+  registrarRetiroEnTx,
   registrarDevolucion,
   prestamosActivosDe,
   historialDe,

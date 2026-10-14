@@ -22,10 +22,14 @@
           <%# F7: las devoluciones vencidas son trabajo pendiente del pañol, así
               que tienen su propia entrada y no viven escondidas en el dashboard. %>
           <a href="/admin/alertas" class="<%= seccion === 'alertas' ? 'active' : '' %>">Alertas</a>
+          <%# F8: las solicitudes de los alumnos son la otra cola de trabajo del
+              docente (aprobar/rechazar reservas y compras). %>
+          <a href="/admin/solicitudes" class="<%= seccion === 'solicitudes' ? 'active' : '' %>">Solicitudes</a>
           <a href="/admin/usuarios" class="<%= seccion === 'usuarios' ? 'active' : '' %>">Usuarios</a>
         <% } else { %>
           <a href="/panel" class="<%= seccion === 'panel' ? 'active' : '' %>">Materiales</a>
           <a href="/panel/mis-prestamos" class="<%= seccion === 'mis-prestamos' ? 'active' : '' %>">Mis préstamos</a>
+          <a href="/panel/mis-solicitudes" class="<%= seccion === 'mis-solicitudes' ? 'active' : '' %>">Mis solicitudes</a>
         <% } %>
         <a href="/contacto" class="<%= seccion === 'contacto' ? 'active' : '' %>">Contacto</a>
         <a href="/institucional" class="<%= seccion === 'institucional' ? 'active' : '' %>">Institucional</a>
