@@ -28,7 +28,12 @@ CREATE TABLE IF NOT EXISTS items (
   observaciones VARCHAR(500) NULL,
   foto VARCHAR(255) NULL,
   ubicacion VARCHAR(120) NULL,
+  -- F6 (T-33 a T-38): código de barras de la etiqueta física. Se deriva del id
+  -- y no se edita a mano, para que una etiqueta vieja siga apuntando al mismo
+  -- ítem. `db/migracion-03-codigos.sql` genera los que falten.
+  codigo_barras VARCHAR(64) NULL,
   fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_items_codigo_barras (codigo_barras),
   INDEX idx_items_categoria (categoria),
   INDEX idx_items_estado (estado)
 ) ENGINE=InnoDB;

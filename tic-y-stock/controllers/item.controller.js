@@ -256,6 +256,75 @@ async function actualizar(req, res) {
 }
 
 /**
+ * Etiqueta de un ítem para reimprimir (F6 — T-37, T-38).
+ *
+ * Existe separada de la hoja de etiquetas porque reimprimir *una* etiqueta es lo
+ * que pasa cuando al docente se le cae una etiqueta del estante, y eso no puede
+ * obligarlo a imprimir las otras treinta.
+ */
+async function etiqueta(req, res) {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
+  }
+
+  const item = await Item.findById(id);
+
+  if (!item) {
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
+  }
+
+  res.render('etiqueta', {
+    title: `Etiqueta de ${item.nombre}`,
+    user: req.session.user,
+    seccion: 'inventario',
+    item,
+  });
+}
+
+/**
+ * Hoja con las etiquetas de todo el inventario (F6 — T-37: "el 100% de los
+ * materiales críticos").
+ *
+ * Sin paginación a propósito: una hoja de etiquetas tiene que ser *completa* o
+ * no sirve, y el corte de páginas lo hace el CSS de impresión. Se agrupa por
+ * categoría para que el docente pueda imprimir por separado un estante entero.
+ *
+ * `?q=`, `?categoria=` y `?estado=` reutilizan los filtros del inventario en vez
+ * de inventar un segundo juego de parámetros: el mismo predicado que ya está
+ * probado y paginado.
+ */
+async function etiquetas(req, res) {
+  const filtros = {
+    q: String(req.query.q || '').trim(),
+    categoria: String(req.query.categoria || '').trim(),
+    estado: ESTADOS.includes(req.query.estado) ? req.query.estado : '',
+  };
+
+  const items = await Item.findAll(filtros, { orden: 'categoria' });
+
+  // Agrupar en el servidor y no en la vista: la vista no debería tener que
+  // saber que 'categoria' es la clave por la que se agrupa.
+  const porCategoria = new Map();
+  for (const item of items) {
+    if (!porCategoria.has(item.categoria)) porCategoria.set(item.categoria, []);
+    porCategoria.get(item.categoria).push(item);
+  }
+
+  res.render('etiquetas', {
+    title: 'Etiquetas del inventario',
+    user: req.session.user,
+    seccion: 'inventario',
+    grupos: [...porCategoria.entries()],
+    total: items.length,
+    filtros,
+    categorias: await Item.categorias(),
+    ESTADOS,
+  });
+}
+
+/**
  * Aviso de guardado, o aviso de que la app normalizó el estado.
  *
  * `Item.update` recalcula `estado` después de aplicar el formulario, así que
@@ -315,4 +384,13 @@ function eliminarArchivoSilencioso(ruta) {
   }
 }
 
-module.exports = { listar, mostrarNuevo, crear, mostrarEditar, actualizar, eliminar };
+module.exports = {
+  listar,
+  mostrarNuevo,
+  crear,
+  mostrarEditar,
+  actualizar,
+  eliminar,
+  etiqueta,
+  etiquetas,
+};

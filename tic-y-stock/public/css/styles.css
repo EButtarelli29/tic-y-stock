@@ -190,6 +190,15 @@ label {
   font-weight: 500;
 }
 
+/* Un `<label>` sin `for`, para cuando la etiqueta no rotula un control editable
+   sino que sólo titula un valor que se muestra (F6: el código de barras). */
+.label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
 input {
   width: 100%;
   padding: 0.6rem 0.8rem;
@@ -1078,5 +1087,240 @@ textarea {
 
   .topbar-user {
     align-self: flex-end;
+  }
+
+  .escaner-eleccion {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   F6 — Escaneo y etiquetas
+   ========================================================================== */
+
+/* El código de barras como texto: se muestra en los formularios y avisos para
+   que el docente pueda copiarlo o tipearlo cuando el lector falla. */
+.codigo {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9em;
+  letter-spacing: 0.04em;
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+}
+
+/* El formulario de escaneo: un campo y el botón, en columna. El input va ancho
+   porque el código se tipea entero o lo completa el lector de una sola vez. */
+.escaner-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* El `.field` ya trae su propio margen inferior: con el gap del form quedaría
+   doble aire entre el campo y el botón. */
+.escaner-form .field {
+  margin-bottom: 0;
+}
+
+/* Cámara: el video sólo se ve cuando hay algo que mirar. */
+.escaner-camara {
+  border-top: 1px solid var(--border);
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.escaner-camara__titulo {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.escaner-camara__estado {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.escaner-camara video {
+  width: 100%;
+  max-width: 32rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0b0b0b;
+  /* Sin cámara encendida no hay nada que ver y el marco vacío confunde. */
+  display: none;
+}
+
+.escaner-camara video[data-activo] {
+  display: block;
+}
+
+/* Las dos opciones del escaneo ambiguo: botones grandes, porque se eligen con el
+   material en la mano y a veces con una mano sola. */
+.escaner-eleccion {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.escaner-eleccion__opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-decoration: none;
+  padding: 1rem 1.25rem;
+  height: auto;
+  text-align: left;
+}
+
+.escaner-eleccion__opcion strong {
+  font-size: 1.05rem;
+}
+
+.escaner-eleccion__opcion span {
+  font-weight: 400;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+/* --------------------------------------------------------------- etiquetas */
+
+/* Tamaño pensado para una hoja de marqueta autoadhesiva (medio carta) recortada
+   de una hoja A4. El `break-inside: avoid` evita que el navegador parta una
+   etiqueta en dos páginas. */
+.etiqueta-impresa {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 0.6rem;
+  background: #fff;
+  color: #0b0b0b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.etiqueta-impresa__nombre {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+  max-width: 100%;
+}
+
+.etiqueta-impresa__meta {
+  font-size: 0.65rem;
+  color: #444;
+}
+
+.etiqueta-impresa__barcode {
+  max-width: 100%;
+  height: auto;
+}
+
+.etiqueta-impresa__codigo {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.etiqueta-sin-dibujo {
+  font-size: 0.65rem;
+  color: #b91c1c;
+}
+
+/* La hoja de etiquetas usa la versión chica; la etiqueta reimpresa usa la grande. */
+main > .etiqueta-impresa {
+  max-width: 12rem;
+  margin: 1.5rem auto;
+  padding: 1rem;
+}
+
+main > .etiqueta-impresa .etiqueta-impresa__nombre {
+  font-size: 1rem;
+}
+
+main > .etiqueta-impresa .etiqueta-impresa__meta,
+main > .etiqueta-impresa .etiqueta-impresa__codigo {
+  font-size: 0.8rem;
+}
+
+.etiquetas-grupo {
+  margin-bottom: 2rem;
+}
+
+.etiquetas-grupo__titulo {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.etiquetas-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.page-acciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.etiqueta-impresa__pie {
+  max-width: 40rem;
+  margin: 0 auto;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------- impresión (T-37) */
+
+/* Al imprimir sale sólo la hoja de etiquetas: sin navbar, sin botones, sin los
+   filtros, y con el texto en negro para no gastar tinta de color. */
+@media print {
+  .no-imprimir,
+  .topbar,
+  .filtros,
+  .card-header {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .page {
+    padding: 0;
+    max-width: none;
+  }
+
+  .etiquetas-rejilla {
+    gap: 0.4rem;
+  }
+
+  /* @page fija el margen de la impresora. Sin esto Chrome manda los distintos
+     elementos a páginas distintas y cada etiqueta queda sola en su hoja. */
+  @page {
+    margin: 12mm;
   }
 }

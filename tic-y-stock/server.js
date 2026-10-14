@@ -7,6 +7,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const panelRoutes = require('./routes/panel.routes');
 const adminRoutes = require('./routes/admin.routes');
+const apiRoutes = require('./routes/api.routes');
 const institucionalRoutes = require('./routes/institucional.routes');
 const { requireAuth } = require('./middleware/auth.middleware');
 const { errorHandler, noEncontrado } = require('./middleware/error.middleware');
@@ -56,6 +57,10 @@ app.use((req, res, next) => {
 app.use('/', authRoutes);
 app.use('/', panelRoutes);
 app.use('/admin', adminRoutes);
+// F6: resolución de códigos de barras. Va suelto en `/api` y no colgado del
+// router de admin porque sólo pide sesión iniciada: el alumno también escanea,
+// para ver qué es lo que tiene en la mano.
+app.use('/api', apiRoutes);
 app.use('/', institucionalRoutes);
 
 app.get('/', requireAuth, (req, res) => {

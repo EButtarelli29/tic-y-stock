@@ -1,0 +1,152 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/movimientos">← Volver a movimientos</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Escanear un código</h1>
+      <p>
+        Leé la etiqueta pegada en el material y el sistema te lleva al formulario que
+        corresponde: un retiro si hay stock, una devolución si hay algo prestado, o te
+        pregunta cuál de las dos si las dos son posibles.
+      </p>
+    </div>
+
+    <% if (aviso) { %>
+      <div class="alert alert--error" role="alert"><%= aviso %></div>
+    <% } %>
+
+    <%# Camino 1: lector USB y tipeo manual. Sirve de los tres: si no hay cámara y
+        no hay lector, el código se escribe a mano. Es el mismo formulario que el
+        cliente usa para resolver el código, así que la página funciona sin JS. %>
+    <form action="/admin/movimientos/escanear" method="get" class="escaner-form" data-escaner>
+      <div class="field">
+        <label for="codigo">Código de barras</label>
+        <input
+          id="codigo"
+          name="codigo"
+          type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="TIC-000073"
+          value="<%= codigo %>"
+          data-escaner-input
+        />
+        <small class="field-hint">
+          Con el lector USB: leé el código y seguí. También podés escribirlo a mano.
+        </small>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">Buscar ítem</button>
+    </form>
+
+    <%# Camino 2: cámara del dispositivo (RNF-02 lo pide como contingencia).
+        Se arma desde JS porque `getUserMedia` no existe sin HTTPS ni localhost —
+        en el taller, por http://192.168.x.x, el navegador la bloquea y por eso el
+        botón avisa en vez de fallar en silencio. %>
+    <div class="escaner-camara">
+      <h2 class="escaner-camara__titulo">O leerlo con la cámara</h2>
+      <video id="escaner-video" data-escaner-video playsinline muted></video>
+      <p class="escaner-camara__estado" data-escaner-estado role="status">
+        La cámara está apagada. Tocatá el botón para usarla.
+      </p>
+      <button type="button" class="btn btn--outline" data-escaner-camara>
+        Activar la cámara
+      </button>
+      <button type="button" class="btn btn--outline btn--sm" data-escaner-cerrar hidden>
+        Apagar la cámara
+      </button>
+    </div>
+  </section>
+
+  <%# Resultado: el escaneo encontró un ítem que sirve para las dos cosas. Acá no se
+      adivina, se pregunta: el mismo material puede estar volviendo de un alumno y
+      al mismo tiempo quedar unidades para entregar a otro. %>
+  <% if (eleccion === 'elegir' && item) { %>
+    <section class="card">
+      <div class="card-header">
+        <h2>¿Retiro o devolución?</h2>
+        <p>
+          <%= item.nombre %> tiene <%= item.cantidad %> en el pañol
+          <% if (prestamos.length > 0) { %>
+            y <%= prestamos.reduce((s, p) => s + Number(p.cantidad), 0) %> unidad(es)
+            prestadas a <%= prestamos.length %> persona(s)
+          <% } %>
+        </p>
+      </div>
+
+      <div class="escaner-eleccion">
+        <a
+          class="btn btn--primary escaner-eleccion__opcion"
+          href="/admin/movimientos/retiro?item=<%= item.id %>&codigo=<%= encodeURIComponent(item.codigo_barras || codigo) %>"
+        >
+          <strong>Registrar un retiro</strong>
+          <span>Saco <%= item.cantidad %> unidad(es) del pañol</span>
+        </a>
+        <a
+          class="btn btn--primary escaner-eleccion__opcion"
+          href="/admin/movimientos/devolucion?item=<%= item.id %>&codigo=<%= encodeURIComponent(item.codigo_barras || codigo) %>"
+        >
+          <strong>Registrar una devolución</strong>
+          <span>Vuelve material que está afuera</span>
+        </a>
+      </div>
+
+      <% if (prestamos.length > 0) { %>
+        <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Préstamos abiertos de este ítem</caption>
+          <thead>
+            <tr><th>Préstamo</th><th>Cantidad</th><th>Quién</th><th>Hace</th></tr>
+          </thead>
+          <tbody>
+            <% prestamos.forEach((p) => { %>
+              <tr>
+                <td>#<%= p.id %></td>
+                <td><%= p.cantidad %></td>
+                <td><%= p.usuario_nombre %></td>
+                <td><%= p.dias %> día(s)</td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+
+      <a class="btn btn--outline btn--sm" href="/admin/inventario/<%= item.id %>/editar">
+        Ver o editar el ítem
+      </a>
+    </section>
+  <% } %>
+
+  <%# Un ítem bloqueado (dado de baja, o sin stock y sin préstamos) se muestra igual
+      para que el docente sepa qué pasó, no sólo un error suelto. %>
+  <% if (item && !eleccion) { %>
+    <section class="card">
+      <div class="card-header">
+        <h2><%= item.nombre %></h2>
+        <p>
+          <span class="codigo"><%= item.codigo_barras %></span> ·
+          <%= item.categoria %> · <%= item.cantidad %> en stock
+          <% if (item.estado !== 'disponible') { %>
+            · <%= item.estado %>
+          <% } %>
+        </p>
+      </div>
+      <a class="btn btn--outline btn--sm" href="/admin/inventario/<%= item.id %>/editar">
+        Ver o editar el ítem
+      </a>
+      <a class="btn btn--primary btn--sm" href="/admin/movimientos/escanear">
+        Escanear otro código
+      </a>
+    </section>
+  <% } %>
+</main>
+
+<%# Vendorizado (RNF-04: la red del colegio no tiene salida a internet, así que
+    nada se baja de un CDN en runtime). Ver public/vendor/README.md. %>
+<script src="/vendor/zxing-0.23.0.min.js" defer></script>
+<script src="/js/escaner.js" defer></script>
+</body>
+</html>

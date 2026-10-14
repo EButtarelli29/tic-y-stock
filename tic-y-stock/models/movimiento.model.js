@@ -280,6 +280,33 @@ async function contarPrestamosActivos() {
 }
 
 /**
+ * Préstamos abiertos de un ítem, del más antiguo al más reciente (F6 — T-35).
+ *
+ * Es lo que permite que un escaneo decida a dónde ir: si el ítem tiene material
+ * afuera, lo que corresponde es una devolución; si no, un retiro. Devolver todos
+ * y no sólo el primero a propósito, porque un ítem puede estar prestado a dos
+ * alumnos a la vez y el escaneo no dice cuál de los dos está devolviendo: eso lo
+ * elige el docente en el formulario, que ya viene con la lista acotada a este
+ * ítem.
+ */
+async function retirosAbiertosDeItem(idItem) {
+  if (!Number.isInteger(idItem) || idItem <= 0) return [];
+  const [rows] = await db.query(
+    `SELECT m.id, m.cantidad, m.fecha_hora, m.observaciones,
+            i.nombre AS item_nombre, i.categoria,
+            u.nombre AS usuario_nombre, u.id AS usuario_id,
+            TIMESTAMPDIFF(DAY, m.fecha_hora, NOW()) AS dias
+     FROM movimientos m
+     JOIN items i ON i.id = m.id_item
+     JOIN usuarios u ON u.id = m.id_usuario
+     WHERE m.id_item = ? AND ${ABIERTO}
+     ORDER BY m.fecha_hora ASC`,
+    [idItem]
+  );
+  return rows;
+}
+
+/**
  * Préstamos abiertos de un usuario o de un ítem.
  *
  * Lo usan los borrados para negarse: `items.id` y `usuarios.id` están en CASCADE
@@ -385,6 +412,7 @@ module.exports = {
   prestamosActivosDe,
   historialDe,
   retirosAbiertos,
+  retirosAbiertosDeItem,
   contarPrestamosActivos,
   contarPrestamosAbiertosDe,
   recalcularEstado,

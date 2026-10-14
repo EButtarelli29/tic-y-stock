@@ -1,0 +1,36 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <div class="page-acciones no-imprimir">
+    <a class="btn btn--outline btn--sm" href="/admin/inventario">← Volver al inventario</a>
+    <button type="button" class="btn btn--primary btn--sm" data-imprimir>Imprimir etiqueta</button>
+  </div>
+
+  <%# Una sola etiqueta, del tamaño de una hoja de marqueta. `data-codigo` es lo
+      que lee public/js/etiquetas.js para dibujar el código de barras con JsBarcode
+      (vendorizado). El código también va escrito en el HTML, debajo del dibujo:
+      si el lector falla o la etiqueta se arruga, el número sigue legible y se
+      puede tipear a mano. %>
+  <section class="etiqueta-impresa">
+    <div class="etiqueta-impresa__nombre"><%= item.nombre %></div>
+    <div class="etiqueta-impresa__meta">
+      <span><%= item.categoria %></span>
+      <% if (item.ubicacion) { %>
+        <span>· <%= item.ubicacion %></span>
+      <% } %>
+    </div>
+    <svg class="etiqueta-impresa__barcode" data-codigo="<%= item.codigo_barras %>" role="img" aria-label="Código de barras <%= item.codigo_barras %>"></svg>
+    <div class="etiqueta-impresa__codigo"><%= item.codigo_barras %></div>
+  </section>
+
+  <p class="etiqueta-impresa__pie no-imprimir">
+    El código de barras no se edita a mano: se deriva del número de ítem en la base.
+    Si se pudiera cambiar, las etiquetas ya pegadas en el taller apuntarían a otro
+    material y el escaneo llevaría el préstamo al ítem equivocado.
+  </p>
+</main>
+
+<script src="/vendor/jsbarcode-3.12.3.min.js" defer></script>
+<script src="/js/etiquetas.js" defer></script>
+</body>
+</html>

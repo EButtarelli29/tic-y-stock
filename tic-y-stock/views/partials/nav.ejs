@@ -15,6 +15,10 @@
           <a href="/admin" class="<%= seccion === 'admin' ? 'active' : '' %>">Dashboard</a>
           <a href="/admin/inventario" class="<%= seccion === 'inventario' ? 'active' : '' %>">Inventario</a>
           <a href="/admin/movimientos" class="<%= seccion === 'movimientos' ? 'active' : '' %>">Movimientos</a>
+          <%# F6: el escaneo es parte del trabajo diario del pañol, no una
+              herramienta escondida. Va al lado de Movimientos porque es el
+              atajo natural a las dos mismas pantallas. %>
+          <a href="/admin/movimientos/escanear" class="<%= seccion === 'escanear' ? 'active' : '' %>">Escanear</a>
           <a href="/admin/usuarios" class="<%= seccion === 'usuarios' ? 'active' : '' %>">Usuarios</a>
         <% } else { %>
           <a href="/panel" class="<%= seccion === 'panel' ? 'active' : '' %>">Materiales</a>

@@ -6,8 +6,11 @@ function buildFiltros({ q = '', categoria = '', estado = '', ubicacion = '', dis
   const params = [];
 
   if (q) {
-    where.push('(nombre LIKE ? OR categoria LIKE ? OR observaciones LIKE ?)');
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    // `codigo_barras` entra en la búsqueda (F6) para que el docente pueda pegar el
+    // número de la etiqueta en el buscador del inventario y llegar al ítem, además
+    // de escribir el nombre.
+    where.push('(nombre LIKE ? OR categoria LIKE ? OR observaciones LIKE ? OR codigo_barras LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (categoria) {
     where.push('categoria = ?');
@@ -74,14 +77,39 @@ async function findById(id) {
 }
 
 /**
+ * Busca un ítem por el código de barras de su etiqueta (F6 — T-34, T-38).
+ *
+ * El código se compara sin distinguir mayúsculas y tolerando espacios, porque un
+ * lector USB a veces manda un espacio o un salto de línea pegado. Un `TRIM`
+ * salva el caso común; no se limpian todos los caracteres raros porque entonces
+ * un código escrito a mano con un typo „TIC–000073" (guion largo) no encontraría
+ * nada, y es mejor que el docente vea "no encontré ese código" que no ver por qué.
+ */
+async function findByCodigo(codigo) {
+  const limpio = String(codigo || '').trim();
+  if (!limpio) return null;
+  const [rows] = await pool.query(
+    'SELECT * FROM items WHERE UPPER(TRIM(codigo_barras)) = UPPER(?) LIMIT 1',
+    [limpio]
+  );
+  return rows[0] || null;
+}
+
+/**
  * Alta y edición de un ítem.
  *
  * Las dos pasan por `Movimiento.recalcularEstado` en la misma transacción. Sin
  * eso, guardar el formulario volvería a mentir: el docente puede editar un ítem
  * que tiene un préstamo abierto y dejar el estado en "disponible", o guardar
- * "prestado" en algo que no tiene nada afuera. Al normalizing en el mismo golpe
+ * "prestado" en algo que no tiene nada afuera. Al normalizarlo en el mismo golpe
  * que el resto de los campos, la edición no puede reintroducir la desincronización
  * que los movimientos se encargan de evitar.
+ *
+ * El alta también deriva el código de barras del id que le da la base, con la
+ * misma regla que el backfill de `db/migracion-03-codigos.sql`. Los dos caminos
+ * (formulario y migración) tienen que producir el mismo código, porque si no, un
+ * ítem cargado por un lado y otro por el otro terminarían con códigos distintos
+ * para la misma convención.
  */
 async function create({ nombre, categoria, cantidad, cantidad_minima, estado, observaciones, foto, ubicacion }) {
   return pool.withTransaction(async (conn) => {
@@ -89,6 +117,10 @@ async function create({ nombre, categoria, cantidad, cantidad_minima, estado, ob
       `INSERT INTO items (nombre, categoria, cantidad, cantidad_minima, estado, observaciones, foto, ubicacion)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [nombre, categoria, cantidad, cantidad_minima, estado, observaciones || null, foto || null, ubicacion || null]
+    );
+    await conn.query(
+      "UPDATE items SET codigo_barras = CONCAT('TIC-', LPAD(?, 6, '0')) WHERE id = ?",
+      [result.insertId, result.insertId]
     );
     await Movimiento.recalcularEstado(result.insertId, conn);
     return result.insertId;
@@ -165,6 +197,7 @@ async function ubicaciones() {
 module.exports = {
   findAll,
   findById,
+  findByCodigo,
   create,
   update,
   remove,

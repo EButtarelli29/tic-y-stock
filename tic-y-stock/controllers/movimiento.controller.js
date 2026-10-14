@@ -115,6 +115,8 @@ async function mostrarRetiro(req, res) {
       id_usuario: '',
       cantidad: 1,
       observaciones: '',
+      // F6: si se llegó escaneando, el código queda asentado en el movimiento.
+      codigo_escaneado: String(req.query.codigo || '').trim().slice(0, 64),
     },
   });
 }
@@ -125,6 +127,7 @@ async function crearRetiro(req, res) {
     id_usuario: String(req.body.id_usuario || ''),
     cantidad: Number(req.body.cantidad || 0),
     observaciones: String(req.body.observaciones || '').trim(),
+    codigo_escaneado: String(req.body.codigo_escaneado || '').trim().slice(0, 64),
   };
 
   const errores = {};
@@ -153,6 +156,7 @@ async function crearRetiro(req, res) {
       id_usuario: idUsuario,
       cantidad: form.cantidad,
       observaciones: form.observaciones,
+      codigo_escaneado: form.codigo_escaneado,
     });
 
     if (!resultado.ok) {
@@ -198,10 +202,20 @@ async function crearRetiro(req, res) {
 // con el botón "Devolver", que entra por `?retiro=ID`.
 const LIMITE_PRESTAMOS_FORM = 300;
 
-/** Choices del formulario de devolución: préstamos abiertos y todos los usuarios. */
-async function datosFormularioDevolucion() {
+/**
+ * Choices del formulario de devolución: préstamos abiertos y todos los usuarios.
+ *
+ * `idItem` acota la lista a un solo ítem (F6 — T-35): cuando el docente llega
+ * escaneando una etiqueta ya sabe cuál es, y ofrecerle los 300 préstamos abiertos
+ * del taller para que busque el suyo es hacerle un trabajo que el escaneo ya
+ * hizo. El filtro no oculta nada: es el mismo predicado `ABIERTO`, más un
+ * `id_item` encima.
+ */
+async function datosFormularioDevolucion({ idItem = 0 } = {}) {
   const [prestamos, usuarios] = await Promise.all([
-    Movimiento.retirosAbiertos({ limite: LIMITE_PRESTAMOS_FORM }),
+    idItem
+      ? Movimiento.retirosAbiertosDeItem(idItem)
+      : Movimiento.retirosAbiertos({ limite: LIMITE_PRESTAMOS_FORM }),
     usuariosOrdenados(),
   ]);
   return { prestamos, usuarios };
@@ -209,23 +223,33 @@ async function datosFormularioDevolucion() {
 
 async function mostrarDevolucion(req, res) {
   const abierto = aId(req.query.retiro);
-  const { prestamos, usuarios } = await datosFormularioDevolucion();
+  const idItem = aId(req.query.item);
+  const { prestamos, usuarios } = await datosFormularioDevolucion({ idItem });
 
   // Si viene ?retiro=ID desde la tabla del historial, se deja preseleccionado.
   const retiro = prestamos.find((p) => p.id === abierto) || null;
+  // Si vino de un escaneo (?item=ID) hay un solo item, pero puede estar prestado
+  // a varias personas: se preselecciona el más antiguo, que es el que primero se
+  // pidió y por lo tanto el que más chances tiene de ser el que se está
+  // devolviendo. El docente puede cambiarlo en el `<select>`.
+  const elegido = retiro || (idItem ? prestamos[0] || null : null);
 
   res.render('movimiento-devolucion', {
     title: 'Registrar devolución',
     user: req.session.user,
     seccion: 'movimientos',
     prestamos,
-    retiro,
+    retiro: elegido,
     usuarios,
     errores: {},
     form: {
-      id_retiro: retiro ? String(retiro.id) : '',
-      id_usuario: retiro ? String(retiro.usuario_id) : '',
+      id_retiro: elegido ? String(elegido.id) : '',
+      id_usuario: elegido ? String(elegido.usuario_id) : '',
       observaciones: '',
+      // El filtro de ítem viaja en el formulario para que el re-render del error
+      // repita la misma lista corta, y no la de todo el taller.
+      id_item: idItem ? String(idItem) : '',
+      codigo_escaneado: String(req.query.codigo || '').trim().slice(0, 64),
     },
   });
 }
@@ -235,11 +259,14 @@ async function crearDevolucion(req, res) {
     id_retiro: String(req.body.id_retiro || ''),
     id_usuario: String(req.body.id_usuario || ''),
     observaciones: String(req.body.observaciones || '').trim(),
+    id_item: String(req.body.id_item || ''),
+    codigo_escaneado: String(req.body.codigo_escaneado || '').trim().slice(0, 64),
   };
 
   const errores = {};
   const idRetiro = aId(form.id_retiro);
   const idUsuario = aId(form.id_usuario);
+  const idFiltroItem = aId(form.id_item);
 
   if (!idRetiro) errores.id_retiro = 'Elegí el préstamo que se está devolviendo.';
   if (!idUsuario) errores.id_usuario = 'Indicá quién hace la devolución.';
@@ -257,6 +284,7 @@ async function crearDevolucion(req, res) {
       id_retiro: idRetiro,
       id_usuario: idUsuario,
       observaciones: form.observaciones,
+      codigo_escaneado: form.codigo_escaneado,
     });
 
     if (!resultado.ok) {
@@ -265,8 +293,9 @@ async function crearDevolucion(req, res) {
       // entre la carga del formulario y el envío. Con la lista releída, ese
       // préstamo ya no aparece en el `<select>` y la vista cae en su empty state,
       // que explica qué pasó — en vez de ofrecer una opción que vuelve a fallar
-      // cada vez que se la elige.
-      const { prestamos, usuarios } = await datosFormularioDevolucion();
+      // cada vez que se la elige. El filtro de ítem se mantiene para no perder el
+      // contexto si se llegó escaneando.
+      const { prestamos, usuarios } = await datosFormularioDevolucion({ idItem: idFiltroItem });
       return res.status(400).render('movimiento-devolucion', {
         title: 'Registrar devolución',
         user: req.session.user,
@@ -286,7 +315,7 @@ async function crearDevolucion(req, res) {
     return res.redirect('/admin/movimientos');
   }
 
-  const { prestamos, usuarios } = await datosFormularioDevolucion();
+  const { prestamos, usuarios } = await datosFormularioDevolucion({ idItem: idFiltroItem });
   return res.status(400).render('movimiento-devolucion', {
     title: 'Registrar devolución',
     user: req.session.user,
@@ -297,6 +326,98 @@ async function crearDevolucion(req, res) {
     errores,
     form,
   });
+}
+
+/* ------------------------------------------------------------------ escaneo */
+
+/**
+ * Qué hacer con un ítem recién escaneado (F6 — T-35).
+ *
+ * El código de barras de la etiqueta dice *qué* material es, nunca *si* se está
+ * entregando o devolviendo: el mismo escaneo sirve para las dos cosas. Lo que
+ * cambia es el estado del ítem, y de ahí sale la decisión:
+ *
+ *   * `baja`                       -> bloqueado: no se retira ni se devuelve.
+ *   * sin stock y sin nada prestado -> bloqueado: no hay nada que hacer.
+ *   * hay préstamo y hay stock      -> *elegir*: es genuinamente ambiguo. El
+ *     mismo ítem puede estar prestado a un alumno (y estar volviendo) y al mismo
+ *     tiempo tener unidades para entregar a otro. Adivinar sería peor que
+ *     preguntar: se pierde el formulario lleno.
+ *   * sólo hay préstamo             -> devolución.
+ *   * sólo hay stock                -> retiro.
+ *
+ * Se declara aparte y sin `async` a propósito: es una regla pura, se lee como la
+ * tabla de arriba y no necesita base de datos.
+ */
+function decidirDestino(item, prestamos) {
+  if (item.estado === 'baja') {
+    return { destino: 'bloqueado', motivo: `${item.nombre} está dado de baja: no se puede retirar ni devolver.` };
+  }
+  if (prestamos.length === 0 && item.cantidad === 0) {
+    return { destino: 'bloqueado', motivo: `No queda stock de ${item.nombre} y no hay nada devuelto pendiente.` };
+  }
+  const puedeRetiro = item.cantidad > 0;
+  const puedeDevolucion = prestamos.length > 0;
+  if (puedeRetiro && puedeDevolucion) return { destino: 'elegir' };
+  if (puedeDevolucion) return { destino: 'devolucion' };
+  return { destino: 'retiro' };
+}
+
+/**
+ * Escaneo de códigos de barras (F6 — T-33 a T-38).
+ *
+ * Es la página de aterrizaje de los tres caminos de escaneo, y por eso el
+ * `?codigo=` se resuelve en el servidor: la cámara (ZXing) y el lector USB
+ * entregan el código al cliente, y el cliente lo manda acá. Resolver en el
+ * servidor y no en el navegador es a propósito — el `SELECT` por `codigo_barras`
+ * necesita el UNIQUE de la base para que "encontré dos ítems" sea imposible, y
+ * el cliente no tiene por qué saber cómo se busca.
+ */
+async function escanear(req, res) {
+  const codigo = String(req.query.codigo || '').trim().slice(0, 64);
+
+  const base = {
+    title: 'Escanear',
+    user: req.session.user,
+    // Sección propia para que el navbar marque "Escanear" y no "Movimientos":
+    // el scan es la pantalla de trabajo del pañol, no un listado.
+    seccion: 'escanear',
+    codigo,
+    item: null,
+    prestamos: [],
+    eleccion: null,
+    aviso: '',
+  };
+
+  if (!codigo) {
+    return res.render('movimiento-escanear', base);
+  }
+
+  const item = await Item.findByCodigo(codigo);
+
+  if (!item) {
+    return res.render('movimiento-escanear', {
+      ...base,
+      aviso: `No encontré ningún ítem con el código "${codigo}". Puede que la etiqueta esté gastada o que el número esté mal tipeado.`,
+    });
+  }
+
+  const prestamos = await Movimiento.retirosAbiertosDeItem(item.id);
+  const { destino, motivo } = decidirDestino(item, prestamos);
+
+  if (destino === 'bloqueado') {
+    return res.render('movimiento-escanear', { ...base, item, prestamos, aviso: motivo });
+  }
+
+  if (destino === 'retiro') {
+    return res.redirect(`/admin/movimientos/retiro?item=${item.id}&codigo=${encodeURIComponent(codigo)}`);
+  }
+
+  if (destino === 'devolucion') {
+    return res.redirect(`/admin/movimientos/devolucion?item=${item.id}&codigo=${encodeURIComponent(codigo)}`);
+  }
+
+  return res.render('movimiento-escanear', { ...base, item, prestamos, eleccion: 'elegir' });
 }
 
 /* ------------------------------------------------------------------ alumno */
@@ -332,5 +453,6 @@ module.exports = {
   crearRetiro,
   mostrarDevolucion,
   crearDevolucion,
+  escanear,
   mostrarMisPrestamos,
 };

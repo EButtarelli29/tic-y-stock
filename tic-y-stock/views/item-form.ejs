@@ -77,6 +77,23 @@
         <small class="field-error"><%= errores.observaciones || '' %></small>
       </div>
 
+      <%# F6 (T-37, T-38): el código de barras va sólo lectura y adentro del
+          `<form>` pero FUERA de todo `input[name]`: no es un dato que el docente
+          pueda cambiar, y si fuera un input hidden alguien podría mandar otro y
+          descolgar la etiqueta física del ítem real. El de un ítem nuevo todavía
+          no existe —lo deriva la base del id que le asigna al guardarlo— así que
+          la vista anticipa el valor para que el docente vea qué se va a imprimir. %>
+      <% if (item) { %>
+        <div class="field">
+          <span class="label">Código de barras</span>
+          <p class="codigo"><%= item.codigo_barras %></p>
+          <small class="field-hint">
+            Se deriva del número del ítem y no se edita: es lo que hace que una
+            etiqueta impresa hace un año siga apuntando al material correcto.
+          </small>
+        </div>
+      <% } %>
+
       <div class="field">
         <label for="foto">Foto técnica</label>
         <% if (item && item.foto) { %>
@@ -101,6 +118,12 @@
       </button>
     </form>
   </section>
+
+  <% if (item) { %>
+    <p class="page-acciones">
+      <a class="btn btn--outline btn--sm" href="/admin/inventario/<%= item.id %>/etiqueta">Imprimir su etiqueta</a>
+    </p>
+  <% } %>
 </main>
 </body>
 </html>

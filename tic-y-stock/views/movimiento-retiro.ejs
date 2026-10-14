@@ -26,6 +26,17 @@
       </div>
     <% } else { %>
       <form action="/admin/movimientos/retiro" method="post" novalidate>
+        <%# F6: si se llegó escaneando, el código queda asentado en el movimiento.
+            El campo viaja aunque no haya escaneo (queda vacío) para que el
+            formulario sea el mismo en los dos caminos. %>
+        <% if (form.codigo_escaneado) { %>
+          <div class="alert alert--aviso" role="status">
+            Ítem elegido por escaneo: <span class="codigo"><%= form.codigo_escaneado %></span>.
+            Queda anotado en el movimiento.
+          </div>
+          <input type="hidden" name="codigo_escaneado" value="<%= form.codigo_escaneado %>" />
+        <% } %>
+
         <div class="field">
           <label for="id_item">Ítem</label>
           <select id="id_item" name="id_item" data-item-retiro required>

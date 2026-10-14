@@ -22,11 +22,34 @@
         <p>
           <%= errores.id_retiro || 'No queda ningún material afuera del pañol, así que no hay nada que devolver.' %>
         </p>
+        <%# Con escaneo, el "no hay nada" es una respuesta útil ("ese material ya
+            volvió"), no un callejón sin salida: hay que decirlo. %>
+        <% if (form.codigo_escaneado && !errores.id_retiro) { %>
+          <p>
+            Escaneaste <span class="codigo"><%= form.codigo_escaneado %></span> y no tiene
+            ningún préstamo abierto: ese material ya está devuelto. Registrá el retiro desde
+            cero con el lector, sin escanear.
+          </p>
+        <% } %>
         <a class="btn btn--outline" href="/admin/movimientos">Ver el historial</a>
         <a class="btn btn--primary" href="/admin/movimientos/retiro">Registrar un retiro</a>
       </div>
     <% } else { %>
       <form action="/admin/movimientos/devolucion" method="post" novalidate>
+        <%# F6: el filtro de ítem y el código escaneado viajan con el formulario
+            para que el re-render del error repita la misma lista corta y para que
+            el movimiento quede asentado con el código de la etiqueta. %>
+        <% if (form.id_item) { %>
+          <input type="hidden" name="id_item" value="<%= form.id_item %>" />
+        <% } %>
+        <% if (form.codigo_escaneado) { %>
+          <div class="alert alert--aviso" role="status">
+            Préstamo elegido por escaneo: <span class="codigo"><%= form.codigo_escaneado %></span>.
+            Queda anotado en el movimiento.
+          </div>
+          <input type="hidden" name="codigo_escaneado" value="<%= form.codigo_escaneado %>" />
+        <% } %>
+
         <div class="field">
           <label for="id_retiro">Préstamo que se devuelve</label>
           <select id="id_retiro" name="id_retiro" required>

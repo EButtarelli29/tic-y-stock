@@ -62,7 +62,7 @@ Fuente: tareas T-08 a T-15 del Product Backlog (Actividad 17) y PMV (Actividad 1
 - [x] **T-22** Apartado institucional `/institucional` (F10)
 - [x] **T-23** Formulario de contacto `/contacto` (almacena consultas)
 
-## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos de stock
+## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos y escaneo
 
 ### F5 — Registro de movimientos (T-28 a T-32)
 
@@ -150,8 +150,70 @@ las que realmente hay, sin que nadie haya tocado el inventario. Por eso `Item.re
 antes. Es el mismo criterio que el `RESTRICT` de `solicitudes`: un registro
 administrativo se resuelve a mano, no se borra.
 
-Fuera de alcance en esta etapa: escaneo de códigos/QR (F6), alertas (F7) y
-reservas/solicitudes (F8). Quedan para los próximos sprints.
+### F6 — Escaneo de códigos de barras y etiquetas (T-33 a T-38)
+
+Fuente: Sprint 7 "Funcionalidad Propia 1 (Escaneo)" del Product Backlog.
+
+- [x] **T-33** Integrar una biblioteca de escaneo por software (se eligió **ZXing**, vendorizada)
+- [x] **T-34** Leer el código de barras desde la cámara del dispositivo
+- [x] **T-35** Conectar el resultado del escaneo con los movimientos (retiro o devolución automáticos)
+- [x] **T-36** Compatibilidad con lector de hardware USB como entrada de teclado
+- [x] **T-37** Generar e imprimir etiquetas con códigos de barras para el 100% de los materiales
+- [x] **T-38** Vincular cada etiqueta física con su registro digital en la base de datos
+
+#### El código de barras
+
+Cada ítem recibe un código propio y estable, derivado de su `id`: `TIC-` más seis
+dígitos (`TIC-000073`). Lo genera el sistema al dar de alta el ítem (con `UNIQUE`
+en la base) y es **de solo lectura**: no se edita a mano. Se muestra en el
+formulario del ítem y se busca tolerando mayúsculas y espacios, porque un lector
+USB puede mandar `tic-000073 `.
+
+#### Cómo se escanea
+
+`/admin/movimientos/escanear` recibe el código y decide a dónde va:
+
+| Situación | Resultado |
+| --- | --- |
+| Hay stock y no hay préstamos | Formulario de **retiro** |
+| Hay un préstamo abierto | Formulario de **devolución** |
+| Hay stock **y** préstamo abierto | Pantalla de **elección** (no se adivina) |
+| Ítem dado de baja, o sin stock ni préstamos | Se explica en pantalla |
+
+Hay tres formas de leer el código, y las tres terminan en el mismo formulario:
+
+1. **Lector USB**: se comporta como un teclado y manda Enter, así que dispara el
+   envío del formulario. No hace falta ninguna librería.
+2. **Cámara**: con ZXing, apuntando al código. Es la contingencia (en la red del
+   colegio, por HTTP, los navegadores pueden bloquear la cámara).
+3. **A mano**: el mismo campo, tipeando el código.
+
+La página funciona **sin JavaScript**: la resolución del código también existe en
+el servidor. El JS (`GET /api/items/:codigo`, que pide sesión) es solo una mejora
+para confirmar el código en pantalla mientras se usa la cámara.
+
+#### Etiquetas
+
+- **Reimpresión individual**: `/admin/inventario/:id/etiqueta`.
+- **Hoja completa**: `/admin/inventario/etiquetas`, agrupada por categoría y
+  filtrable, con una etiqueta por ítem para imprimir de una vez.
+
+El código de barras se dibuja con **JsBarcode** (también vendorizado) y debajo va
+el código escrito, para que la etiqueta siga siendo legible si el dibujo no
+carga. Al imprimir se esconden el navbar y los botones.
+
+Las dos librerías (ZXing y JsBarcode) están **dentro del repositorio**
+(`public/vendor/`), no se bajan de ninguna CDN: el sistema tiene que funcionar en
+la red del colegio, que no tiene salida a internet (RNF-04). La procedencia y las
+licencias quedan documentadas en `public/vendor/README.md`.
+
+#### Trazabilidad
+
+`movimientos.codigo_escaneado` guarda el código que se leyó en cada retiro o
+devolución (queda vacío si se tipeó a mano sin escanear). Así cada etiqueta física
+queda vinculada al movimiento que la usó.
+
+Fuera de alcance en esta etapa: alertas (F7) y reservas/solicitudes (F8).
 
 ## Puesta en marcha
 
@@ -224,6 +286,7 @@ ya existe y hay que actualizar, hay migraciones numeradas en `db/`:
 ```powershell
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-01-fks.sql"
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-02-movimientos.sql"
+& 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-03-codigos.sql"
 ```
 
 Cada migración es idempotente (se puede correr más de una vez) y avisa por pantalla si
@@ -238,13 +301,15 @@ levantado en el puerto 3000 y la base cargada:
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Temp\opencode\test_sprints.ps1"   # 29 chequeos
 node "$env:LOCALAPPDATA\Temp\opencode\smoke-test.js"                                          # 60 chequeos
 node "$env:LOCALAPPDATA\Temp\opencode\test-f5.js"                                             # 134 chequeos (F5)
+node "$env:LOCALAPPDATA\Temp\opencode\test-f6.js"                                             # 84 chequeos (F6)
 ```
 
 Recorren público, alumno y superusuario, y borran los datos que crean. Están fuera del
-repo porque los dos de Node hardcodean el `path` de MySQL de esta máquina; si los agregás
+repo porque los de Node hardcodean el `path` de MySQL de esta máquina; si los agregás
 al repo, acordá antes el `path` de XAMPP o parametrizalo. La verificación visual se hizo
-con `revisa-html-f5.js`, que chequea el HTML renderizado (clases presentes en el CSS,
-marcado balanceado, sin `undefined`) porque no había forma de tomar capturas.
+con `revisa-html-f5.js` y `revisa-html-f6.js`, que chequean el HTML renderizado (clases
+presentes en el CSS, marcado balanceado, sin `undefined`) porque no había forma de tomar
+capturas.
 
 ### Configuración (variables de entorno, archivo `.env`)
 
@@ -266,20 +331,22 @@ Copiá `.env.example` a `.env` y ajustá lo que necesites. `.env` está en `.git
 ```
 tic-y-stock/
 ├── server.js                 # Entrada: Express, sesiones, rutas, vistas
-├── routes/                   # Capa de rutas: auth, panel, admin, institucional
+├── routes/                   # Capa de rutas: auth, panel, admin, institucional, api (F6)
 ├── controllers/              # Capa de negocio: auth, panel, item, movimiento, admin, institucional
 ├── middleware/               # auth, upload (multer), rate-limit, error
 ├── models/                   # Capa de datos: db.js, user, item, movimiento, alerta, contacto
 ├── db/
 │   ├── schema.sql            # Esquema MySQL (6 tablas con claves foráneas)
 │   ├── migracion-01-fks.sql  # Agrega las claves foráneas a una base ya instalada
-│   └── migracion-02-movimientos.sql  # cantidad, vínculo devolución→retro y sus restricciones
+│   ├── migracion-02-movimientos.sql  # cantidad, vínculo devolución→retro y sus restricciones
+│   └── migracion-03-codigos.sql      # F6: items.codigo_barras (UNIQUE) + backfill
 ├── scripts/                  # crear-superusuario.js (db:seed), datos-demo.js (db:demo)
 ├── views/                    # Plantillas EJS + partials/: head, nav
 ├── .env.example              # Plantilla de configuración (copiar a .env)
 ├── public/
-│   ├── css/styles.css        # Estilos del frontend
-│   ├── js/                   # Validaciones de formularios y filtros en vivo
+│   ├── css/styles.css        # Estilos del frontend (incluye print de etiquetas)
+│   ├── js/                   # Validaciones de formularios, filtros y escaneo (escaner.js, etiquetas.js)
+│   ├── vendor/               # F6: ZXing y JsBarcode vendorizados (sin CDN) — ver su README
 │   └── uploads/items/        # Fotos de insumos (multer, ignorada por git)
 ```
 
@@ -330,6 +397,10 @@ valor histórico:
 Cuando un `RESTRICT` bloquea un borrado, el `errorHandler` responde **409** con un
 mensaje en vez de un 500 genérico.
 
+F6 agrega dos columnas: `items.codigo_barras` (**`UNIQUE`**, derivada del `id`) y
+`movimientos.codigo_escaneado` (el código que se leyó al retiro o la devolución, o vacío
+si se tipeó a mano). Las agrega `db/migracion-03-codigos.sql` sobre una base existente.
+
 Ojo: el MySQL de XAMPP no trae `STRICT_TRANS_TABLES`, así que un `INSERT` con un texto
 más largo que el `VARCHAR` se **trunca en silencio**. Por eso todos los formularios
 validan la longitud contra el ancho de la columna y los `input` llevan `maxlength`.
@@ -371,6 +442,9 @@ docente edita el ítem a mano).
   detectado, no con la del nombre original. Si no, un `.html` declarado como `image/png`
   se guardaba como `.html` y lo servía `express.static` como HTML de la app (XSS
   almacenado). Además se manda `X-Content-Type-Options: nosniff`.
+- La API de resolución de códigos (`GET /api/items/:codigo`) también exige sesión: sin
+  sesión redirige al login en vez de exponer el inventario. Devuelve solo campos no
+  sensibles y es una ayuda de pantalla, no el camino por el que se registran los movimientos.
 - Errores de base de datos devuelven un 503 con mensaje genérico (nunca el stack al cliente);
   el detalle va a la consola del servidor.
 - Las páginas de error incluyen el navbar, así que un 404 no deja al usuario sin salida.

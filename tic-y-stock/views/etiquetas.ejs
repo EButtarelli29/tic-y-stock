@@ -1,0 +1,80 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <div class="page-acciones no-imprimir">
+    <a class="btn btn--outline btn--sm" href="/admin/inventario">← Volver al inventario</a>
+    <button type="button" class="btn btn--primary btn--sm" data-imprimir>Imprimir <%= total %> etiqueta(s)</button>
+  </div>
+
+  <div class="card-header">
+    <h1>Etiquetas del inventario</h1>
+    <p>
+      <%= total %> ítem(s). Imprimí la hoja, pegá las etiquetas y el material se escanea
+      solo. Los filtros son los mismos del inventario: <code>?q=cable</code>, categoría
+      o estado.
+    </p>
+  </div>
+
+  <form action="/admin/inventario/etiquetas" method="get" class="filtros no-imprimir">
+    <div class="field">
+      <label class="sr-only" for="etq-q">Buscar</label>
+      <input id="etq-q" name="q" type="search" placeholder="Buscar por nombre o código…" value="<%= filtros.q %>" />
+    </div>
+    <div class="field">
+      <label class="sr-only" for="etq-categoria">Categoría</label>
+      <select id="etq-categoria" name="categoria">
+        <option value="">Todas las categorías</option>
+        <% categorias.forEach((c) => { %>
+          <option value="<%= c %>" <%= filtros.categoria === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label class="sr-only" for="etq-estado">Estado</label>
+      <select id="etq-estado" name="estado">
+        <option value="">Todos los estados</option>
+        <% ESTADOS.forEach((e) => { %>
+          <option value="<%= e %>" <%= filtros.estado === e ? 'selected' : '' %>><%= e %></option>
+        <% }) %>
+      </select>
+    </div>
+    <button type="submit" class="btn btn--primary">Filtrar</button>
+  </form>
+
+  <% if (total === 0) { %>
+    <section class="card empty-state">
+      <h2>Nada para etiquetar</h2>
+      <p>Ningún ítem del inventario coincide con el filtro.</p>
+      <a class="btn btn--outline" href="/admin/inventario/etiquetas">Ver todo el inventario</a>
+    </section>
+  <% } %>
+
+  <%# Una sección por categoría, para poder imprimir un estante entero sin andar
+      cortando la hoja a mano. El salto de página lo define el CSS de impresión
+      con break-inside avoid en cada etiqueta. %>
+  <% grupos.forEach(([categoria, items]) => { %>
+    <section class="etiquetas-grupo">
+      <h2 class="etiquetas-grupo__titulo"><%= categoria %> (<%= items.length %>)</h2>
+      <div class="etiquetas-rejilla">
+        <% items.forEach((item) => { %>
+          <div class="etiqueta-impresa">
+            <div class="etiqueta-impresa__nombre"><%= item.nombre %></div>
+            <div class="etiqueta-impresa__meta">
+              <span><%= item.categoria %></span>
+              <% if (item.ubicacion) { %>
+                <span>· <%= item.ubicacion %></span>
+              <% } %>
+            </div>
+            <svg class="etiqueta-impresa__barcode" data-codigo="<%= item.codigo_barras %>" role="img" aria-label="Código de barras <%= item.codigo_barras %>"></svg>
+            <div class="etiqueta-impresa__codigo"><%= item.codigo_barras %></div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  <% }) %>
+</main>
+
+<script src="/vendor/jsbarcode-3.12.3.min.js" defer></script>
+<script src="/js/etiquetas.js" defer></script>
+</body>
+</html>

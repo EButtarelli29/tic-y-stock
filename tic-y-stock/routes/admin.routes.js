@@ -15,12 +15,18 @@ router.get('/', asyncHandler(admin.mostrarDashboard));
 router.get('/inventario', asyncHandler(item.listar));
 router.get('/inventario/nuevo', asyncHandler(item.mostrarNuevo));
 router.post('/inventario/nuevo', subirFoto, asyncHandler(item.crear));
+// F6 (T-37, T-38): una etiqueta para reelegir, y la hoja completa para imprimir.
+router.get('/inventario/etiquetas', asyncHandler(item.etiquetas));
+router.get('/inventario/:id/etiqueta', asyncHandler(item.etiqueta));
 router.get('/inventario/:id/editar', asyncHandler(item.mostrarEditar));
 router.post('/inventario/:id/editar', subirFoto, asyncHandler(item.actualizar));
 router.post('/inventario/:id/eliminar', asyncHandler(item.eliminar));
 
 /* Movimientos de stock (F5 / Sprint 6-8: T-28 a T-32) */
 router.get('/movimientos', asyncHandler(movimiento.listar));
+// F6: la página de escaneo entra por acá y es la que decide si el código va a un
+// retiro o a una devolución.
+router.get('/movimientos/escanear', asyncHandler(movimiento.escanear));
 router.get('/movimientos/retiro', asyncHandler(movimiento.mostrarRetiro));
 router.post('/movimientos/retiro', asyncHandler(movimiento.crearRetiro));
 router.get('/movimientos/devolucion', asyncHandler(movimiento.mostrarDevolucion));
