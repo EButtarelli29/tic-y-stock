@@ -11,6 +11,9 @@ router.use(requireAuth, requireSuperusuario);
 /* Dashboard (T-47, T-48) */
 router.get('/', asyncHandler(admin.mostrarDashboard));
 
+/* Alertas de devolución (F7 — T-39 a T-41) */
+router.get('/alertas', asyncHandler(admin.mostrarAlertas));
+
 /* Inventario (F3 / Sprint 5) */
 router.get('/inventario', asyncHandler(item.listar));
 router.get('/inventario/nuevo', asyncHandler(item.mostrarNuevo));

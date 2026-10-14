@@ -19,6 +19,9 @@
               herramienta escondida. Va al lado de Movimientos porque es el
               atajo natural a las dos mismas pantallas. %>
           <a href="/admin/movimientos/escanear" class="<%= seccion === 'escanear' ? 'active' : '' %>">Escanear</a>
+          <%# F7: las devoluciones vencidas son trabajo pendiente del pañol, así
+              que tienen su propia entrada y no viven escondidas en el dashboard. %>
+          <a href="/admin/alertas" class="<%= seccion === 'alertas' ? 'active' : '' %>">Alertas</a>
           <a href="/admin/usuarios" class="<%= seccion === 'usuarios' ? 'active' : '' %>">Usuarios</a>
         <% } else { %>
           <a href="/panel" class="<%= seccion === 'panel' ? 'active' : '' %>">Materiales</a>

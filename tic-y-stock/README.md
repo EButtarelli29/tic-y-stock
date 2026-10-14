@@ -62,7 +62,7 @@ Fuente: tareas T-08 a T-15 del Product Backlog (Actividad 17) y PMV (Actividad 1
 - [x] **T-22** Apartado institucional `/institucional` (F10)
 - [x] **T-23** Formulario de contacto `/contacto` (almacena consultas)
 
-## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos y escaneo
+## Requerimientos — Etapa 3 (Sprints 6 a 8): movimientos, escaneo y alertas
 
 ### F5 — Registro de movimientos (T-28 a T-32)
 
@@ -213,7 +213,43 @@ licencias quedan documentadas en `public/vendor/README.md`.
 devolución (queda vacío si se tipeó a mano sin escanear). Así cada etiqueta física
 queda vinculada al movimiento que la usó.
 
-Fuera de alcance en esta etapa: alertas (F7) y reservas/solicitudes (F8).
+### F7 — Alertas de devolución (T-39 a T-41)
+
+Fuente: Sprint 8 "Funcionalidad Propia 2 (Alertas)" del Product Backlog. Cierra el
+círculo de F5: no alcanza con registrar quién se llevó el material, también hace
+falta saber **qué no volvió y hace cuánto**.
+
+- [x] **T-39** Detección de devoluciones pendientes o vencidas
+- [x] **T-40** Alertas activas en el dashboard del superusuario
+- [x] **T-41** Marcado de la alerta como resuelta al registrar la devolución
+
+#### Cuándo nace y cuándo se cierra una alerta
+
+La alerta se crea **en la misma transacción que el retiro** y se resuelve **en la
+misma transacción que la devolución**. No hay ningún proceso periódico que "revise
+vencimientos": mientras el préstamo esté abierto, su alerta está `activa`.
+
+| Evento | Efecto |
+| --- | --- |
+| Se registra un retiro | Se crea la alerta, con vencimiento a `PLAZO_PRESTAMO_DIAS` días (7 por defecto) |
+| Se registra la devolución | La alerta del retiro pasa a `resuelta` |
+| Se borra el retiro | La alerta se borra en cascada (FK `alertas.id_movimiento`) |
+
+#### Pendiente y vencida
+
+No son dos estados guardados, sino la misma alerta activa comparada con la fecha de
+hoy (`DATEDIFF` contra `CURDATE()`): **vencida** cuando el vencimiento ya pasó,
+**pendiente** cuando todavía no. Así una alerta no se queda "vieja" esperando que
+alguien actualice una columna todas las mañanas.
+
+El plazo no está fijo en el código: sale de la variable `PLAZO_PRESTAMO_DIAS` del
+`.env` (7 si no se define o si el valor no es un entero positivo). El dashboard
+muestra el contador de activas (y cuántas están vencidas) y la página
+`/admin/alertas` lista todas, con un enlace directo para registrar la devolución de
+cada una.
+
+Fuera de alcance en esta etapa: reservas/solicitudes (F8) y la exportación del
+historial (T-50).
 
 ## Puesta en marcha
 
@@ -287,7 +323,12 @@ ya existe y hay que actualizar, hay migraciones numeradas en `db/`:
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-01-fks.sql"
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-02-movimientos.sql"
 & 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-03-codigos.sql"
+& 'C:\xampp\mysql\bin\mysql.exe' -u root --default-character-set=utf8mb4 -e "source db/migracion-04-alertas.sql"
 ```
+
+`migracion-03-codigos.sql` agregó columnas (F6); `migracion-04-alertas.sql` es **de
+datos**: le crea la alerta a los préstamos que ya estaban abiertos cuando se empezó a
+usar F7, así el panel no arranca con material afuera y cero avisos.
 
 Cada migración es idempotente (se puede correr más de una vez) y avisa por pantalla si
 encuentra datos que la van a bloquear, sin tocar nada.
@@ -302,14 +343,15 @@ powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Temp\opencode\test_s
 node "$env:LOCALAPPDATA\Temp\opencode\smoke-test.js"                                          # 60 chequeos
 node "$env:LOCALAPPDATA\Temp\opencode\test-f5.js"                                             # 134 chequeos (F5)
 node "$env:LOCALAPPDATA\Temp\opencode\test-f6.js"                                             # 84 chequeos (F6)
+node "$env:LOCALAPPDATA\Temp\opencode\test-f7.js"                                             # 26 chequeos (F7)
 ```
 
 Recorren público, alumno y superusuario, y borran los datos que crean. Están fuera del
 repo porque los de Node hardcodean el `path` de MySQL de esta máquina; si los agregás
 al repo, acordá antes el `path` de XAMPP o parametrizalo. La verificación visual se hizo
-con `revisa-html-f5.js` y `revisa-html-f6.js`, que chequean el HTML renderizado (clases
-presentes en el CSS, marcado balanceado, sin `undefined`) porque no había forma de tomar
-capturas.
+con `revisa-html-f5.js`, `revisa-html-f6.js` y `revisa-html-f7.js`, que chequean el HTML
+renderizado (clases presentes en el CSS, marcado balanceado, sin `undefined`) porque no
+había forma de tomar capturas.
 
 ### Configuración (variables de entorno, archivo `.env`)
 
@@ -325,6 +367,7 @@ Copiá `.env.example` a `.env` y ajustá lo que necesites. `.env` está en `.git
 | `SEED_NOMBRE` | `Docente TIC` | Nombre de la cuenta superusuario inicial |
 | `SEED_EMAIL` | `docente@ticystock.ar` | Correo de esa cuenta |
 | `SEED_CONTRASENA` | `docente123` | Contraseña. En ASCII a propósito: las variables con `ñ` fallan según la codificación de la consola |
+| `PLAZO_PRESTAMO_DIAS` | `7` | Días que puede estar un material afuera antes de que la devolución figure como vencida (F7) |
 
 ## Estructura del proyecto
 
@@ -339,7 +382,8 @@ tic-y-stock/
 │   ├── schema.sql            # Esquema MySQL (6 tablas con claves foráneas)
 │   ├── migracion-01-fks.sql  # Agrega las claves foráneas a una base ya instalada
 │   ├── migracion-02-movimientos.sql  # cantidad, vínculo devolución→retro y sus restricciones
-│   └── migracion-03-codigos.sql      # F6: items.codigo_barras (UNIQUE) + backfill
+│   ├── migracion-03-codigos.sql      # F6: items.codigo_barras (UNIQUE) + backfill
+│   └── migracion-04-alertas.sql      # F7: alerta para los préstamos que ya estaban abiertos
 ├── scripts/                  # crear-superusuario.js (db:seed), datos-demo.js (db:demo)
 ├── views/                    # Plantillas EJS + partials/: head, nav
 ├── .env.example              # Plantilla de configuración (copiar a .env)
@@ -380,7 +424,8 @@ error en `detalle`, no en `mensaje`, que es el mensaje flash del navbar.
 - **usuario** — alumno: se crea por registro público. Accede a `/panel` (catálogo con filtros y detalle)
   y a `/panel/mis-prestamos` (sus préstamos activos y su historial, solo lectura).
 - **superusuario** — docente / Jefe de Taller: se crea solo con `npm run db:seed` (no hay registro público).
-  Accede a `/admin`: dashboard, inventario (CRUD), movimientos (retiros y devoluciones) y gestión de usuarios.
+  Accede a `/admin`: dashboard, inventario (CRUD), movimientos (retiros y devoluciones), alertas de
+  devolución (`/admin/alertas`) y gestión de usuarios.
 
 ## Base de datos
 
@@ -400,6 +445,11 @@ mensaje en vez de un 500 genérico.
 F6 agrega dos columnas: `items.codigo_barras` (**`UNIQUE`**, derivada del `id`) y
 `movimientos.codigo_escaneado` (el código que se leyó al retiro o la devolución, o vacío
 si se tipeó a mano). Las agrega `db/migracion-03-codigos.sql` sobre una base existente.
+
+F7 no agrega columnas: usa la tabla `alertas` que existe desde F1. Cada fila cuelga de
+un retiro (`id_movimiento`), nace `activa` con una `fecha_vencimiento` y pasa a
+`resuelta` al devolverse el material. `db/migracion-04-alertas.sql` es una migración de
+datos que le crea la alerta a los préstamos que ya estaban abiertos.
 
 Ojo: el MySQL de XAMPP no trae `STRICT_TRANS_TABLES`, así que un `INSERT` con un texto
 más largo que el `VARCHAR` se **trunca en silencio**. Por eso todos los formularios

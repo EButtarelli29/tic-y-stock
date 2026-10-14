@@ -31,7 +31,7 @@
     <div class="stat-card">
       <span class="stat-label">Alertas activas</span>
       <strong class="stat-value <%= resumen.alertasActivas > 0 ? 'text-critical' : '' %>"><%= resumen.alertasActivas %></strong>
-      <span class="stat-link">Devoluciones pendientes</span>
+      <a class="stat-link" href="/admin/alertas"><%= resumen.alertasVencidas %> vencida(s)</a>
     </div>
     <div class="stat-card">
       <span class="stat-label">Cuentas de superusuario</span>
@@ -39,6 +39,49 @@
       <a class="stat-link" href="/admin/usuarios">Gestionar usuarios</a>
     </div>
   </section>
+
+  <% if (resumen.alertasActivas > 0) { %>
+  <section class="card panel-block">
+    <div class="card-header panel-block-header">
+      <h2>Devoluciones pendientes</h2>
+      <a class="btn btn--outline btn--sm" href="/admin/alertas">Ver todas</a>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ítem</th>
+            <th>Cant.</th>
+            <th>Usuario</th>
+            <th>Retirado</th>
+            <th>Vence</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% resumen.alertas.forEach((a) => { %>
+            <tr>
+              <td><%= a.item_nombre %></td>
+              <td><%= a.cantidad %></td>
+              <td><%= a.usuario_nombre %></td>
+              <td><%= new Date(a.fecha_hora).toLocaleDateString('es-AR') %></td>
+              <td><%= a.fecha_vencimiento_txt %></td>
+              <td>
+                <% if (a.dias_para_vencer < 0) { %>
+                  <span class="badge badge--vencida">Vencida hace <%= -a.dias_para_vencer %> d</span>
+                <% } else { %>
+                  <span class="badge badge--activo">Pendiente</span>
+                <% } %>
+              </td>
+              <td><a class="btn btn--outline btn--sm" href="/admin/movimientos/devolucion?retiro=<%= a.id_movimiento %>">Devolver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <% } %>
 
   <section class="card panel-block">
     <div class="card-header panel-block-header">

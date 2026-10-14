@@ -1,0 +1,78 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Alertas de devolución</h1>
+      <p>
+        Material que salió del pañol y todavía no volvió. Una devolución se considera
+        vencida cuando pasaron más de <%= plazoDias %> día(s) desde el retiro.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn--outline" href="/admin/movimientos?abiertos=1">Ver todos los préstamos</a>
+    </div>
+  </header>
+
+  <% if (alertas.length === 0) { %>
+    <div class="card">
+      <div class="empty-state">
+        <p>No hay devoluciones pendientes. Todo el material está en el pañol.</p>
+      </div>
+    </div>
+  <% } else { %>
+    <div class="card panel-block">
+      <div class="card-header panel-block-header">
+        <h2><%= alertas.length %> préstamo(s) sin devolver</h2>
+        <% if (vencidas > 0) { %>
+          <span class="badge badge--vencida"><%= vencidas %> vencida(s)</span>
+        <% } %>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Ítem</th>
+              <th>Cant.</th>
+              <th>Usuario</th>
+              <th>Retirado</th>
+              <th>Vence</th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% alertas.forEach((a) => { %>
+              <tr>
+                <td>
+                  <%= a.item_nombre %>
+                  <% if (a.ubicacion) { %>
+                    <span class="field-hint"><%= a.ubicacion %></span>
+                  <% } %>
+                </td>
+                <td><%= a.cantidad %></td>
+                <td><%= a.usuario_nombre %></td>
+                <td><%= new Date(a.fecha_hora).toLocaleDateString('es-AR') %></td>
+                <td><%= a.fecha_vencimiento_txt %></td>
+                <td>
+                  <% if (a.dias_para_vencer < 0) { %>
+                    <span class="badge badge--vencida">Vencida hace <%= -a.dias_para_vencer %> d</span>
+                  <% } else if (a.dias_para_vencer === 0) { %>
+                    <span class="badge badge--activo">Vence hoy</span>
+                  <% } else { %>
+                    <span class="badge badge--activo">En <%= a.dias_para_vencer %> d</span>
+                  <% } %>
+                </td>
+                <td><span class="mov-nota"><%= a.observaciones || '—' %></span></td>
+                <td><a class="btn btn--outline btn--sm" href="/admin/movimientos/devolucion?retiro=<%= a.id_movimiento %>">Registrar devolución</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+</main>
+</body>
+</html>

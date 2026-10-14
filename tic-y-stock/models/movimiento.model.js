@@ -1,4 +1,5 @@
 const db = require('./db');
+const Alerta = require('./alerta.model');
 
 /**
  * Un movimiento es un evento: "en este momento, esta persona se llevó estas
@@ -153,6 +154,9 @@ async function registrarRetiro({ id_item, id_usuario, cantidad, observaciones = 
     // En la misma transacción, para que el estado no pueda quedar diciendo
     // "disponible" con material recién entregado.
     await recalcularEstado(id_item, conn);
+    // F7 (T-39): el retiro deja su alerta de devolución con la fecha límite.
+    // Misma transacción: no puede haber material afuera sin su alerta.
+    await Alerta.crearParaRetiro(conn, { idMovimiento: insercion.insertId, fechaHora: fecha_hora });
 
     return { ok: true, id: insercion.insertId, item_nombre: item.nombre, cantidad };
   });
@@ -213,6 +217,9 @@ async function registrarDevolucion({ id_retiro, id_usuario, observaciones = '', 
     // Puede haber otro préstamo abierto del mismo ítem, y por eso el recálculo
     // pregunta en vez de asumir que el material quedó todo en el pañol.
     await recalcularEstado(retiro.id_item, conn);
+    // F7 (T-41): el préstamo volvió, así que su alerta deja de estar activa.
+    // Misma transacción: una devolución nunca deja una alerta colgada.
+    await Alerta.resolverDeRetiro(conn, id_retiro);
 
     return {
       ok: true,

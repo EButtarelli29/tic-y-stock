@@ -609,6 +609,12 @@ textarea {
   color: #b45309;
 }
 
+/* F7: la devolución ya pasó su fecha */
+.badge--vencida {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--destructive);
+}
+
 /* Movimientos (F5) */
 .mov-nota {
   max-width: 18rem;

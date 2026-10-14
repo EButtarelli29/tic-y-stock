@@ -12,11 +12,13 @@ const MAX_EMAIL = 190;
 const MIN_PASSWORD = 6;
 
 async function mostrarDashboard(req, res) {
-  const [totalItems, stockCritico, alertasActivas, ultimosMovimientos, totalSuperusuarios, prestamosActivos] =
+  const [totalItems, stockCritico, alertasActivas, alertasVencidas, alertas, ultimosMovimientos, totalSuperusuarios, prestamosActivos] =
     await Promise.all([
       Item.contar(),
       Item.stockCritico(),
       Alerta.countActivas(),
+      Alerta.contarVencidas(),
+      Alerta.listarActivas({ limite: 8 }),
       Movimiento.ultimos(8),
       User.countByRol('superusuario'),
       Movimiento.contarPrestamosActivos(),
@@ -30,10 +32,27 @@ async function mostrarDashboard(req, res) {
       totalItems,
       stockCritico,
       alertasActivas,
+      alertasVencidas,
+      alertas,
       ultimosMovimientos,
       totalSuperusuarios,
       prestamosActivos,
     },
+  });
+}
+
+/* ---- Alertas de devolución (F7 — T-39 a T-41) ---- */
+
+async function mostrarAlertas(req, res) {
+  const [alertas, vencidas] = await Promise.all([Alerta.listarActivas(), Alerta.contarVencidas()]);
+
+  res.render('alertas', {
+    title: 'Alertas de devolución',
+    user: req.session.user,
+    seccion: 'alertas',
+    alertas,
+    vencidas,
+    plazoDias: Alerta.plazoDias(),
   });
 }
 
@@ -246,6 +265,7 @@ function validarUsuario({ nombre, email, rol, contraseña }, { esNuevo }) {
 
 module.exports = {
   mostrarDashboard,
+  mostrarAlertas,
   mostrarUsuarios,
   mostrarNuevoUsuario,
   crearUsuario,
