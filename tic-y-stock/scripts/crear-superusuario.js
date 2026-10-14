@@ -9,7 +9,10 @@ const User = require('../models/user.model');
 async function main() {
   const nombre = process.env.SEED_NOMBRE || 'Docente TIC';
   const email = (process.env.SEED_EMAIL || 'docente@ticystock.ar').toLowerCase();
-  const contraseña = process.env.SEED_CONTRASEÑA || 'docente123';
+  // Nombre de variable en ASCII a propósito: las variables de entorno con
+  // "ñ" fallan según la codificación de la consola, y `.env.example` documenta
+  // esta misma clave.
+  const contraseña = process.env.SEED_CONTRASENA || 'docente123';
 
   const existe = await User.findByEmail(email);
   if (existe) {

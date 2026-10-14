@@ -1,0 +1,3 @@
+# Logs de ejecución del servidor (salen por consola al correr `npm start`)
+server.log
+npm-debug.log*

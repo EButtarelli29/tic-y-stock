@@ -1,0 +1,100 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Mis préstamos</h1>
+      <p>El material que tenés ahora mismo en tu poder y cuándo lo devolviste.</p>
+    </div>
+    <p class="page-header-meta">
+      <% if (prestamos.length === 0) { %>
+        Sin préstamos activos
+      <% } else if (prestamos.length === 1) { %>
+        1 préstamo activo · <%= totalUnidades %> unidad(es)
+      <% } else { %>
+        <%= prestamos.length %> préstamos activos · <%= totalUnidades %> unidad(es)
+      <% } %>
+    </p>
+  </header>
+
+  <% if (prestamos.length === 0) { %>
+    <div class="empty-state">
+      <h2>No tenés nada prestado</h2>
+      <p>Cuando saegas material del pañol, el responsable lo anota acá y lo vas a ver en esta lista.</p>
+      <a class="btn btn--outline" href="/panel">Ver los materiales disponibles</a>
+    </div>
+  <% } else { %>
+    <section class="cards-grid">
+      <% prestamos.forEach((p) => { %>
+        <article class="item-card">
+          <div class="item-card-body">
+            <h3><%= p.item_nombre %></h3>
+            <p class="item-card-meta"><%= p.categoria %> · <%= p.ubicacion || 'Sin ubicación' %></p>
+            <dl class="info-list">
+              <div><dt>Cantidad</dt><dd><%= p.cantidad %></dd></div>
+              <div><dt>Retiraste</dt><dd><%= new Date(p.fecha_hora).toLocaleDateString('es-AR') %></dd></div>
+              <div><dt>Hace</dt><dd><%= p.dias %> día(s)</dd></div>
+              <% if (p.observaciones) { %>
+                <div><dt>Nota</dt><dd><%= p.observaciones %></dd></div>
+              <% } %>
+            </dl>
+            <div class="item-card-footer">
+              <span class="badge badge--activo">Activo</span>
+              <a class="btn btn--outline btn--sm" href="/panel/item/<%= p.id_item %>">Ver el material</a>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+    </section>
+  <% } %>
+
+  <%# Un alumno no registra el retiro ni la devolución: lo hace el responsable del
+      pañol. Por eso esto es solo lectura. %>
+  <section class="card panel-block">
+    <div class="card-header panel-block-header">
+      <h2>Mis últimos movimientos</h2>
+      <p>Historial completo, incluidos los préstamos ya devueltos.</p>
+    </div>
+
+    <% if (historial.length === 0) { %>
+      <div class="empty-state">
+        <p>Todavía no tenés movimientos registrados.</p>
+      </div>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Ítem</th>
+              <th>Cant.</th>
+              <th>Fecha y hora</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% historial.forEach((m) => { %>
+              <tr>
+                <td><span class="badge badge--mov badge--<%= m.tipo %>"><%= ETIQUETAS_TIPO[m.tipo] %></span></td>
+                <td><%= m.item_nombre %></td>
+                <td><%= m.cantidad %></td>
+                <td><%= new Date(m.fecha_hora).toLocaleString('es-AR') %></td>
+                <td>
+                  <% if (m.tipo === 'devolucion') { %>
+                    <span class="muted">cerrado</span>
+                  <% } else if (m.abierto) { %>
+                    <span class="badge badge--activo">Abierto</span>
+                  <% } else { %>
+                    <span class="muted">devuelto</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>

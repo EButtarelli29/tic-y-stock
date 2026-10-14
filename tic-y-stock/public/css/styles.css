@@ -178,6 +178,13 @@ body {
   gap: 0.75rem;
 }
 
+/* Checkbox dentro de la barra de filtros: no lleva label encima, así que se
+   alinea con la base de los selects en vez de quedar pegado al borde superior. */
+.field--check {
+  justify-content: flex-end;
+  padding-bottom: 0.4rem;
+}
+
 label {
   font-size: 0.9rem;
   font-weight: 500;
@@ -322,6 +329,13 @@ textarea {
   background: rgba(22, 163, 74, 0.08);
   border-color: rgba(22, 163, 74, 0.5);
   color: #15803d;
+}
+
+/* Aviso informative: el guardado salió bien pero la app ajustó un valor. */
+.alert--aviso {
+  background: rgba(202, 138, 4, 0.08);
+  border-color: rgba(202, 138, 4, 0.5);
+  color: #854d0e;
 }
 
 .alert--error {
@@ -564,6 +578,12 @@ textarea {
   color: var(--muted-foreground);
 }
 
+/* Base de los badges de tipo de movimiento. `nowrap` evita que "Devolución"
+   parta la palabra en una columna angosta de la tabla. */
+.badge--mov {
+  white-space: nowrap;
+}
+
 .badge--retiro {
   background: rgba(220, 38, 38, 0.1);
   color: var(--destructive);
@@ -572,6 +592,45 @@ textarea {
 .badge--devolucion {
   background: rgba(22, 163, 74, 0.12);
   color: #15803d;
+}
+
+/* Préstamo abierto: un retiro sin devolución que lo cierre */
+.badge--activo {
+  background: rgba(230, 126, 34, 0.14);
+  color: #b45309;
+}
+
+/* Movimientos (F5) */
+.mov-nota {
+  max-width: 18rem;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+
+.field-hint {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+/* Paginación: la usan el inventario (T-13) y los movimientos (T-31) */
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.paginacion-info {
+  font-size: 0.9rem;
+  color: var(--muted-foreground);
+}
+
+.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Detalle de ítem (T-27) */
@@ -932,6 +991,11 @@ textarea {
 
 .topbar-name {
   font-size: 0.95rem;
+}
+
+/* El form que envuelve el botón de cerrar sesión no debe sumar altura al navbar. */
+.topbar-logout {
+  margin: 0;
 }
 
 .badge {

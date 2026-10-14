@@ -22,13 +22,13 @@
       <form action="/register" method="post" novalidate id="register-form">
         <div class="field">
           <label for="nombre">Nombre completo</label>
-          <input id="nombre" name="nombre" type="text" placeholder="Juan Pérez"
+          <input id="nombre" name="nombre" type="text" placeholder="Juan Pérez" maxlength="120"
                  value="<%= datos.nombre %>" required autocomplete="name" />
           <small class="field-error" data-error-for="nombre"><%= errores.nombre || '' %></small>
         </div>
         <div class="field">
           <label for="email">Correo electrónico</label>
-          <input id="email" name="email" type="email" placeholder="tu@ejemplo.com"
+          <input id="email" name="email" type="email" placeholder="tu@ejemplo.com" maxlength="190"
                  value="<%= datos.email %>" required autocomplete="email" />
           <small class="field-error" data-error-for="email"><%= errores.email || '' %></small>
         </div>

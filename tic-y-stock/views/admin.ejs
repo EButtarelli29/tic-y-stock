@@ -19,9 +19,14 @@
       <a class="stat-link" href="/admin/inventario">Ver listado</a>
     </div>
     <div class="stat-card">
+      <span class="stat-label">Préstamos activos</span>
+      <strong class="stat-value"><%= resumen.prestamosActivos %></strong>
+      <a class="stat-link" href="/admin/movimientos?abiertos=1">Ver quién tiene material</a>
+    </div>
+    <div class="stat-card">
       <span class="stat-label">Stock crítico</span>
       <strong class="stat-value <%= resumen.stockCritico > 0 ? 'text-critical' : '' %>"><%= resumen.stockCritico %></strong>
-      <a class="stat-link" href="/admin/inventario?estado=disponible">Revisar inventario</a>
+      <a class="stat-link" href="/admin/inventario?stock_critico=1">Revisar inventario</a>
     </div>
     <div class="stat-card">
       <span class="stat-label">Alertas activas</span>
@@ -38,7 +43,7 @@
   <section class="card panel-block">
     <div class="card-header panel-block-header">
       <h2>Últimos movimientos</h2>
-      <a class="btn btn--outline btn--sm" href="/admin/inventario">Ir al inventario</a>
+      <a class="btn btn--outline btn--sm" href="/admin/movimientos">Ver historial completo</a>
     </div>
 
     <% if (resumen.ultimosMovimientos.length === 0) { %>
@@ -52,6 +57,7 @@
             <tr>
               <th>Movimiento</th>
               <th>Ítem</th>
+              <th>Cant.</th>
               <th>Usuario</th>
               <th>Fecha y hora</th>
             </tr>
@@ -61,6 +67,7 @@
               <tr>
                 <td><span class="badge badge--mov badge--<%= m.tipo %>"><%= m.tipo === 'retiro' ? 'Retiro' : 'Devolución' %></span></td>
                 <td><%= m.item_nombre %></td>
+                <td><%= m.cantidad %></td>
                 <td><%= m.usuario_nombre %></td>
                 <td><%= new Date(m.fecha_hora).toLocaleString('es-AR') %></td>
               </tr>

@@ -1,4 +1,5 @@
 const Item = require('../models/item.model');
+const { renderError } = require('../middleware/error.middleware');
 
 const ESTADOS_LABEL = {
   disponible: 'Disponible',
@@ -8,9 +9,11 @@ const ESTADOS_LABEL = {
 };
 
 async function mostrarPanel(req, res) {
-  const { tipo = '', disponibilidad = '' } = req.query;
+  const { tipo = '', disponibilidad = '', q = '' } = req.query;
+  const busqueda = String(q).trim();
 
   const items = await Item.findAll({
+    q: busqueda,
     categoria: String(tipo).trim(),
     disponible: disponibilidad === 'disponible',
   });
@@ -24,6 +27,7 @@ async function mostrarPanel(req, res) {
     ESTADOS_LABEL,
     tipo: String(tipo).trim(),
     disponibilidad,
+    q: busqueda,
     totalDisponibles: items.filter((i) => i.estado === 'disponible' && i.cantidad > 0).length,
   });
 }
@@ -32,23 +36,13 @@ async function mostrarDetalleItem(req, res) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
   const item = await Item.findById(id);
 
   if (!item) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
   res.render('item-detalle', {

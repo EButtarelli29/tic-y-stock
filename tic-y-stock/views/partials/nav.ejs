@@ -14,9 +14,11 @@
         <% if (user.rol === 'superusuario') { %>
           <a href="/admin" class="<%= seccion === 'admin' ? 'active' : '' %>">Dashboard</a>
           <a href="/admin/inventario" class="<%= seccion === 'inventario' ? 'active' : '' %>">Inventario</a>
+          <a href="/admin/movimientos" class="<%= seccion === 'movimientos' ? 'active' : '' %>">Movimientos</a>
           <a href="/admin/usuarios" class="<%= seccion === 'usuarios' ? 'active' : '' %>">Usuarios</a>
         <% } else { %>
           <a href="/panel" class="<%= seccion === 'panel' ? 'active' : '' %>">Materiales</a>
+          <a href="/panel/mis-prestamos" class="<%= seccion === 'mis-prestamos' ? 'active' : '' %>">Mis préstamos</a>
         <% } %>
         <a href="/contacto" class="<%= seccion === 'contacto' ? 'active' : '' %>">Contacto</a>
         <a href="/institucional" class="<%= seccion === 'institucional' ? 'active' : '' %>">Institucional</a>
@@ -32,7 +34,9 @@
       <% if (user) { %>
         <span class="badge badge--<%= user.rol %>"><%= user.rol %></span>
         <span class="topbar-name"><%= user.nombre %></span>
-        <a class="btn btn--ghost" href="/logout">Cerrar sesión</a>
+        <form class="topbar-logout" action="/logout" method="post">
+          <button type="submit" class="btn btn--ghost">Cerrar sesión</button>
+        </form>
       <% } %>
     </div>
   </div>

@@ -43,7 +43,7 @@
         <form action="/login" method="post" novalidate id="login-form">
           <div class="field">
             <label for="email">Correo electrónico</label>
-            <input id="email" name="email" type="email" placeholder="tu@ejemplo.com"
+            <input id="email" name="email" type="email" placeholder="tu@ejemplo.com" maxlength="190"
                    value="<%= email %>" required autocomplete="email" />
             <small class="field-error" data-error-for="email"></small>
           </div>

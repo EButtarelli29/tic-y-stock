@@ -9,6 +9,23 @@
     <a class="btn btn--primary" href="/admin/inventario/nuevo">+ Nuevo ítem</a>
   </header>
 
+  <%
+    // Links de paginación que conservan los filtros activos.
+    const paramsPaginacion = new URLSearchParams();
+    if (filtros.q) paramsPaginacion.set('q', filtros.q);
+    if (filtros.categoria) paramsPaginacion.set('categoria', filtros.categoria);
+    if (filtros.estado) paramsPaginacion.set('estado', filtros.estado);
+    if (filtros.ubicacion) paramsPaginacion.set('ubicacion', filtros.ubicacion);
+    if (filtros.stockCritico) paramsPaginacion.set('stock_critico', '1');
+    if (orden !== 'nombre') paramsPaginacion.set('orden', orden);
+    const urlPagina = (n) => {
+      const p = new URLSearchParams(paramsPaginacion);
+      if (n > 1) p.set('pagina', String(n));
+      return `/admin/inventario?${p.toString()}`;
+    };
+    const etiquetaOrden = { nombre: 'Nombre', cantidad: 'Cantidad', categoria: 'Categoría' };
+  %>
+
   <form class="filters-form" action="/admin/inventario" method="get" data-filtros-form>
     <div class="field filters-search">
       <label class="sr-only" for="buscar-inventario">Buscar</label>
@@ -41,6 +58,22 @@
         <% }) %>
       </select>
     </div>
+    <div class="field">
+      <label for="orden">Ordenar por</label>
+      <select id="orden" name="orden">
+        <% Object.entries(etiquetaOrden).forEach(([valor, texto]) => { %>
+          <option value="<%= valor %>" <%= orden === valor ? 'selected' : '' %>><%= texto %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field field--check">
+      <label for="stock_critico">
+        <input id="stock_critico" name="stock_critico" type="checkbox" value="1" <%= filtros.stockCritico ? 'checked' : '' %> />
+        Solo stock crítico
+      </label>
+    </div>
+    <%# Al filtrar de nuevo se vuelve a la primera página. %>
+    <input type="hidden" name="pagina" value="1" />
     <div class="filters-actions">
       <button type="submit" class="btn btn--primary" data-boton-filtrar>Filtrar</button>
       <a class="btn btn--outline" href="/admin/inventario">Limpiar</a>
@@ -53,7 +86,9 @@
       <p>No hay ítems que coincidan con el filtro. Probá con otros criterios o cargá un ítem nuevo.</p>
     </div>
   <% } else { %>
-    <p class="muted list-count"><%= items.length %> ítem(s)</p>
+    <p class="muted list-count">
+      Mostrando <%= paginacion.desde %>–<%= paginacion.hasta %> de <%= paginacion.total %> ítem(s)
+    </p>
     <div class="table-wrap">
       <table class="table" data-inventario-tabla>
         <thead>
@@ -65,6 +100,7 @@
             <th>Mín.</th>
             <th>Estado</th>
             <th>Ubicación</th>
+            <th>Préstamos</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -80,10 +116,20 @@
               </td>
               <td><%= item.nombre %></td>
               <td><%= item.categoria %></td>
-              <td class="<%= item.cantidad <= item.cantidad_minima && item.estado !== 'baja' ? 'text-critical' : '' %>"><%= item.cantidad %></td>
+              <td class="<%= item.cantidad < item.cantidad_minima && item.estado !== 'baja' ? 'text-critical' : '' %>"><%= item.cantidad %></td>
               <td><%= item.cantidad_minima %></td>
               <td><span class="badge badge--estado badge--<%= item.estado %>"><%= item.estado %></span></td>
               <td><%= item.ubicacion || '—' %></td>
+              <%# Préstamos abiertos reales, no el `estado` manual: el link lleva al
+                  historial ya filtrado por ese ítem. %>
+              <% const prestamos = prestamosPorItem[item.id]; %>
+              <td>
+                <% if (prestamos) { %>
+                  <a href="/admin/movimientos?item=<%= item.id %>&abiertos=1"><%= prestamos.prestamos %> abierto(s)</a>
+                <% } else { %>
+                  <span class="muted">—</span>
+                <% } %>
+              </td>
               <td class="table-actions">
                 <a class="btn btn--outline btn--sm" href="/admin/inventario/<%= item.id %>/editar">Editar</a>
                 <button type="button" class="btn btn--danger btn--sm" data-eliminar-item data-nombre="<%= item.nombre %>" data-url="/admin/inventario/<%= item.id %>/eliminar">Eliminar</button>
@@ -93,6 +139,24 @@
         </tbody>
       </table>
     </div>
+
+    <% if (paginacion.paginas > 1) { %>
+      <nav class="paginacion" aria-label="Paginación del inventario">
+        <% if (paginacion.pagina > 1) { %>
+          <a class="btn btn--outline btn--sm" href="<%= urlPagina(paginacion.pagina - 1) %>" rel="prev">← Anterior</a>
+        <% } else { %>
+          <span class="btn btn--outline btn--sm is-disabled" aria-hidden="true">← Anterior</span>
+        <% } %>
+
+        <span class="paginacion-info">Página <%= paginacion.pagina %> de <%= paginacion.paginas %></span>
+
+        <% if (paginacion.pagina < paginacion.paginas) { %>
+          <a class="btn btn--outline btn--sm" href="<%= urlPagina(paginacion.pagina + 1) %>" rel="next">Siguiente →</a>
+        <% } else { %>
+          <span class="btn btn--outline btn--sm is-disabled" aria-hidden="true">Siguiente →</span>
+        <% } %>
+      </nav>
+    <% } %>
   <% } %>
 </main>
 

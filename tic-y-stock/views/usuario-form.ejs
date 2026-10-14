@@ -16,12 +16,12 @@
     <form action="<%= usuario ? `/admin/usuarios/${usuario.id}/editar` : '/admin/usuarios/nuevo' %>" method="post" novalidate>
       <div class="field">
         <label for="nombre">Nombre completo</label>
-        <input id="nombre" name="nombre" type="text" value="<%= form.nombre %>" required autocomplete="off" />
+        <input id="nombre" name="nombre" type="text" value="<%= form.nombre %>" maxlength="120" required autocomplete="off" />
         <small class="field-error"><%= errores.nombre || '' %></small>
       </div>
       <div class="field">
         <label for="email">Correo electrónico</label>
-        <input id="email" name="email" type="email" value="<%= form.email %>" required autocomplete="off" />
+        <input id="email" name="email" type="email" value="<%= form.email %>" maxlength="190" required autocomplete="off" />
         <small class="field-error"><%= errores.email || '' %></small>
       </div>
       <div class="field">

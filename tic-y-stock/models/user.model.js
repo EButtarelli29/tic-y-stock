@@ -1,4 +1,5 @@
 const pool = require('./db');
+const Movimiento = require('./movimiento.model');
 
 async function findByEmail(email) {
   const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ? LIMIT 1', [email]);
@@ -64,9 +65,30 @@ async function update(id, { nombre, email, rol, contraseña } = {}) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Borra un usuario.
+ *
+ * Se niega si tiene préstamos abiertos. Sus movimientos se irían en cascada y con
+ * ellos el único registro de que ese material está afuera del pañol: el ítem
+ * volvería "disponible" con una unidad menos de las que realmente tiene, y nadie
+ * podría devolver lo que ya no está anotado en ningún lado. Es el mismo criterio
+ * que el `RESTRICT` de `solicitudes`: un registro administrativo se resuelve a
+ * mano, no se borra.
+ *
+ * La regla vive acá y no en el controlador para que ningún llamador la esquive.
+ * Devuelve `{ ok, error }` en vez de tirar, porque es el camino normal de un
+ * formulario mal tocado, no una falla.
+ */
 async function remove(id) {
+  const pendientes = await Movimiento.contarPrestamosAbiertosDe({ id_usuario: id });
+  if (pendientes > 0) {
+    return {
+      ok: false,
+      error: `Este usuario tiene ${pendientes} préstamo(s) sin devolver. Registrá la devolución antes de eliminar la cuenta.`,
+    };
+  }
   const [result] = await pool.query('DELETE FROM usuarios WHERE id = ?', [id]);
-  return result.affectedRows > 0;
+  return { ok: result.affectedRows > 0 };
 }
 
 async function countByRol(rol) {

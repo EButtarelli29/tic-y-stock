@@ -19,12 +19,12 @@
       <form action="/contacto" method="post" novalidate>
         <div class="field">
           <label for="contacto-nombre">Nombre</label>
-          <input id="contacto-nombre" name="nombre" type="text" placeholder="Tu nombre completo" value="<%= form.nombre %>" required />
+          <input id="contacto-nombre" name="nombre" type="text" placeholder="Tu nombre completo" maxlength="120" value="<%= form.nombre %>" required />
           <small class="field-error"><%= errores.nombre || '' %></small>
         </div>
         <div class="field">
           <label for="contacto-email">Correo electrónico</label>
-          <input id="contacto-email" name="email" type="email" placeholder="tu@ejemplo.com" value="<%= form.email %>" required />
+          <input id="contacto-email" name="email" type="email" placeholder="tu@ejemplo.com" maxlength="190" value="<%= form.email %>" required />
           <small class="field-error"><%= errores.email || '' %></small>
         </div>
         <div class="field">

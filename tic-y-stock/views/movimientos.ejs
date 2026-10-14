@@ -1,0 +1,180 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <header class="page-header">
+    <div>
+      <h1>Movimientos</h1>
+      <p>Historial de retiros y devoluciones del pañol. Cada fila es un evento: la devolución apunta al retiro que cierra.</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn--primary" href="/admin/movimientos/retiro">Registrar retiro</a>
+      <a class="btn btn--outline" href="/admin/movimientos/devolucion">Registrar devolución</a>
+    </div>
+  </header>
+
+  <%
+    // Links de paginación que conservan los filtros activos.
+    const paramsPaginacion = new URLSearchParams();
+    if (filtros.q) paramsPaginacion.set('q', filtros.q);
+    if (filtros.tipo) paramsPaginacion.set('tipo', filtros.tipo);
+    if (filtros.idItem) paramsPaginacion.set('item', String(filtros.idItem));
+    if (filtros.idUsuario) paramsPaginacion.set('usuario', String(filtros.idUsuario));
+    if (filtros.desde) paramsPaginacion.set('desde', filtros.desde);
+    if (filtros.hasta) paramsPaginacion.set('hasta', filtros.hasta);
+    if (filtros.soloAbiertos) paramsPaginacion.set('abiertos', '1');
+    if (orden !== 'fecha') paramsPaginacion.set('orden', orden);
+    const urlPagina = (n) => {
+      const p = new URLSearchParams(paramsPaginacion);
+      if (n > 1) p.set('pagina', String(n));
+      return `/admin/movimientos?${p.toString()}`;
+    };
+    const etiquetaOrden = { fecha: 'Fecha', item: 'Ítem', usuario: 'Usuario', cantidad: 'Cantidad' };
+  %>
+
+  <form class="filters-form" action="/admin/movimientos" method="get" data-filtros-form>
+    <div class="field filters-search">
+      <label class="sr-only" for="buscar-movimiento">Buscar</label>
+      <input id="buscar-movimiento" name="q" type="search" placeholder="Buscar por ítem, usuario o nota…" value="<%= filtros.q %>" data-busqueda />
+    </div>
+    <div class="field">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Todos</option>
+        <option value="retiro" <%= filtros.tipo === 'retiro' ? 'selected' : '' %>>Solo retiros</option>
+        <option value="devolucion" <%= filtros.tipo === 'devolucion' ? 'selected' : '' %>>Solo devoluciones</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="item">Ítem</label>
+      <select id="item" name="item">
+        <option value="">Todos</option>
+        <% items.forEach((i) => { %>
+          <option value="<%= i.id %>" <%= filtros.idItem === i.id ? 'selected' : '' %>><%= i.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="usuario">Usuario</label>
+      <select id="usuario" name="usuario">
+        <option value="">Todos</option>
+        <% usuarios.forEach((u) => { %>
+          <option value="<%= u.id %>" <%= filtros.idUsuario === u.id ? 'selected' : '' %>><%= u.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field">
+      <label for="desde">Desde</label>
+      <input id="desde" name="desde" type="date" value="<%= filtros.desde %>" />
+    </div>
+    <div class="field">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" name="hasta" type="date" value="<%= filtros.hasta %>" />
+    </div>
+    <div class="field">
+      <label for="orden">Ordenar por</label>
+      <select id="orden" name="orden">
+        <% Object.entries(etiquetaOrden).forEach(([valor, texto]) => { %>
+          <option value="<%= valor %>" <%= orden === valor ? 'selected' : '' %>><%= texto %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="field field--check">
+      <label for="abiertos">
+        <input id="abiertos" name="abiertos" type="checkbox" value="1" <%= filtros.soloAbiertos ? 'checked' : '' %> />
+        Solo préstamos abiertos
+      </label>
+    </div>
+    <%# Al filtrar de nuevo se vuelve a la primera página. %>
+    <input type="hidden" name="pagina" value="1" />
+    <div class="filters-actions">
+      <button type="submit" class="btn btn--primary" data-boton-filtrar>Filtrar</button>
+      <a class="btn btn--outline" href="/admin/movimientos">Limpiar</a>
+    </div>
+  </form>
+
+  <% if (movimientos.length === 0) { %>
+    <div class="empty-state">
+      <h2>Sin resultados</h2>
+      <p>
+        <% if (filtros.q || filtros.tipo || filtros.idItem || filtros.idUsuario || filtros.desde || filtros.hasta || filtros.soloAbiertos) { %>
+          No hay movimientos que coincidan con el filtro. Probá con otros criterios.
+        <% } else { %>
+          Todavía no hay movimientos registrados. Cuando saques material del pañol, usá el botón de arriba.
+        <% } %>
+      </p>
+    </div>
+  <% } else { %>
+    <p class="muted list-count">
+      Mostrando <%= paginacion.desde %>–<%= paginacion.hasta %> de <%= paginacion.total %> movimiento(s)
+    </p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Ítem</th>
+            <th>Cant.</th>
+            <th>Usuario</th>
+            <th>Fecha y hora</th>
+            <th>Estado</th>
+            <th>Nota</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% movimientos.forEach((m) => { %>
+            <tr>
+              <td><span class="badge badge--mov badge--<%= m.tipo %>"><%= ETIQUETAS_TIPO[m.tipo] %></span></td>
+              <td>
+                <%= m.item_nombre %>
+                <% if (m.tipo === 'devolucion') { %>
+                  <%# "cierra el movimiento #123": el vínculo queda a la vista. %>
+                  <br /><small class="muted">cierra el retiro #<%= m.id_retiro %></small>
+                <% } %>
+              </td>
+              <td><%= m.cantidad %></td>
+              <td><%= m.usuario_nombre %></td>
+              <td><%= new Date(m.fecha_hora).toLocaleString('es-AR') %></td>
+              <td>
+                <% if (m.tipo === 'devolucion') { %>
+                  <span class="muted">cerrado</span>
+                <% } else if (m.abierto) { %>
+                  <span class="badge badge--activo">Abierto</span>
+                <% } else { %>
+                  <span class="muted">devuelto</span>
+                <% } %>
+              </td>
+              <td class="mov-nota"><%= m.observaciones || '—' %></td>
+              <td class="table-actions">
+                <% if (m.tipo === 'retiro' && m.abierto) { %>
+                  <a class="btn btn--outline btn--sm" href="/admin/movimientos/devolucion?retiro=<%= m.id %>">Devolver</a>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (paginacion.paginas > 1) { %>
+      <nav class="paginacion" aria-label="Paginación de movimientos">
+        <% if (paginacion.pagina > 1) { %>
+          <a class="btn btn--outline btn--sm" href="<%= urlPagina(paginacion.pagina - 1) %>" rel="prev">← Anterior</a>
+        <% } else { %>
+          <span class="btn btn--outline btn--sm is-disabled" aria-hidden="true">← Anterior</span>
+        <% } %>
+
+        <span class="paginacion-info">Página <%= paginacion.pagina %> de <%= paginacion.paginas %></span>
+
+        <% if (paginacion.pagina < paginacion.paginas) { %>
+          <a class="btn btn--outline btn--sm" href="<%= urlPagina(paginacion.pagina + 1) %>" rel="next">Siguiente →</a>
+        <% } else { %>
+          <span class="btn btn--outline btn--sm is-disabled" aria-hidden="true">Siguiente →</span>
+        <% } %>
+      </nav>
+    <% } %>
+  <% } %>
+</main>
+<script src="/js/movimientos.js" defer></script>
+</body>
+</html>

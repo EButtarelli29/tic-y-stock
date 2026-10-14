@@ -1,0 +1,74 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/movimientos">← Volver a movimientos</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Registrar retiro</h1>
+      <p>Sacá material del pañol a nombre de un alumno. El stock se descuenta solo.</p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <%# Mismo criterio que en la devolución: si el último ejemplar se retiró desde
+        otra pestaña, el ítem desaparece del select y el error de "no hay stock"
+        quedaría sin mostrar. %>
+    <% if (items.length === 0) { %>
+      <div class="empty-state">
+        <h2><%= errores.id_item ? 'No se pudo registrar el retiro' : 'No hay nada retirable' %></h2>
+        <p>
+          <%= errores.id_item || 'Solo aparecen los ítems con stock y que no estén dados de baja. Cargá material en el inventario antes de registrar un retiro.' %>
+        </p>
+        <a class="btn btn--primary" href="/admin/inventario/nuevo">Cargar ítem</a>
+      </div>
+    <% } else { %>
+      <form action="/admin/movimientos/retiro" method="post" novalidate>
+        <div class="field">
+          <label for="id_item">Ítem</label>
+          <select id="id_item" name="id_item" data-item-retiro required>
+            <option value="">Elegí el material…</option>
+            <% items.forEach((i) => { %>
+              <option value="<%= i.id %>" data-stock="<%= i.cantidad %>" <%= form.id_item === String(i.id) ? 'selected' : '' %>>
+                <%= i.nombre %> — <%= i.cantidad %> en stock (<%= i.categoria %>)
+              </option>
+            <% }) %>
+          </select>
+          <small class="field-hint" data-stock-disponible></small>
+          <small class="field-error"><%= errores.id_item || '' %></small>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="cantidad">Cantidad</label>
+            <input id="cantidad" name="cantidad" type="number" min="1" step="1" value="<%= form.cantidad %>" data-cantidad-retiro required />
+            <small class="field-error"><%= errores.cantidad || '' %></small>
+          </div>
+          <div class="field">
+            <label for="id_usuario">Quién se lo lleva</label>
+            <select id="id_usuario" name="id_usuario" required>
+              <option value="">Elegí a quién…</option>
+              <% usuarios.forEach((u) => { %>
+                <option value="<%= u.id %>" <%= form.id_usuario === String(u.id) ? 'selected' : '' %>><%= u.nombre %></option>
+              <% }) %>
+            </select>
+            <small class="field-error"><%= errores.id_usuario || '' %></small>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" name="observaciones" rows="3" maxlength="500" placeholder="Para qué lo necesita, hasta cuándo, cómo lo recibe…"><%= form.observaciones %></textarea>
+          <small class="field-error"><%= errores.observaciones || '' %></small>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Registrar retiro</button>
+      </form>
+    <% } %>
+  </section>
+</main>
+<script src="/js/movimientos.js" defer></script>
+</body>
+</html>

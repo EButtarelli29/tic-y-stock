@@ -2,6 +2,13 @@ const Contacto = require('../models/contacto.model');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Límites de longitud según los VARCHAR del esquema (db/schema.sql). Sin esto,
+// MySQL en modo no estricto trunca en silencio y guarda un dato incompleto.
+const MAX_NOMBRE = 120;
+const MAX_EMAIL = 190;
+const MAX_MENSAJE = 1000;
+const MIN_MENSAJE = 10;
+
 async function mostrarInstitucional(req, res) {
   res.render('institucional', {
     title: 'Institucional',
@@ -31,15 +38,18 @@ async function enviarContacto(req, res) {
   const errores = {};
   if (!datos.nombre || datos.nombre.trim().length < 2) {
     errores.nombre = 'Ingresá tu nombre.';
+  } else if (datos.nombre.length > MAX_NOMBRE) {
+    errores.nombre = `El nombre no puede superar los ${MAX_NOMBRE} caracteres.`;
   }
   if (!datos.email || !EMAIL_REGEX.test(datos.email)) {
     errores.email = 'Ingresá un correo electrónico válido.';
+  } else if (datos.email.length > MAX_EMAIL) {
+    errores.email = 'El correo es demasiado largo.';
   }
-  if (!datos.mensaje || datos.mensaje.length < 10) {
-    errores.mensaje = 'Escribí un mensaje de al menos 10 caracteres.';
-  }
-  if (datos.mensaje.length > 1000) {
-    errores.mensaje = 'El mensaje no puede superar los 1000 caracteres.';
+  if (!datos.mensaje || datos.mensaje.length < MIN_MENSAJE) {
+    errores.mensaje = `Escribí un mensaje de al menos ${MIN_MENSAJE} caracteres.`;
+  } else if (datos.mensaje.length > MAX_MENSAJE) {
+    errores.mensaje = `El mensaje no puede superar los ${MAX_MENSAJE} caracteres.`;
   }
 
   if (Object.keys(errores).length > 0) {

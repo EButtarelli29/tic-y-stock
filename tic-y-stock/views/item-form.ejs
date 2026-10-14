@@ -16,14 +16,14 @@
     <form action="<%= item ? `/admin/inventario/${item.id}/editar` : '/admin/inventario/nuevo' %>" method="post" enctype="multipart/form-data" novalidate>
       <div class="field">
         <label for="nombre">Nombre del material</label>
-        <input id="nombre" name="nombre" type="text" placeholder="Ej: Cable UTP Cat6" value="<%= form.nombre %>" required />
+        <input id="nombre" name="nombre" type="text" placeholder="Ej: Cable UTP Cat6" maxlength="190" value="<%= form.nombre %>" required />
         <small class="field-error"><%= errores.nombre || '' %></small>
       </div>
 
       <div class="field-row">
         <div class="field">
           <label for="categoria">Categoría / tipo</label>
-          <input id="categoria" name="categoria" type="text" list="lista-categorias" placeholder="Ej: cables" value="<%= form.categoria %>" required />
+          <input id="categoria" name="categoria" type="text" list="lista-categorias" placeholder="Ej: cables" maxlength="60" value="<%= form.categoria %>" required />
           <datalist id="lista-categorias">
             <% categorias.forEach((c) => { %>
               <option value="<%= c %>"></option>
@@ -33,7 +33,7 @@
         </div>
         <div class="field">
           <label for="ubicacion">Ubicación</label>
-          <input id="ubicacion" name="ubicacion" type="text" list="lista-ubicaciones" placeholder="Ej: estante 3" value="<%= form.ubicacion %>" />
+          <input id="ubicacion" name="ubicacion" type="text" list="lista-ubicaciones" placeholder="Ej: estante 3" maxlength="120" value="<%= form.ubicacion %>" />
           <datalist id="lista-ubicaciones">
             <% ubicaciones.forEach((u) => { %>
               <option value="<%= u %>"></option>
@@ -63,6 +63,11 @@
             <option value="<%= e %>" <%= form.estado === e ? 'selected' : '' %>><%= e %></option>
           <% }) %>
         </select>
+        <small class="field-hint">
+          "Disponible" y "prestado" los calcula el sistema a partir de los préstamos: si hay
+          material de este ítem afuera del pañol, queda como "prestado" haya lo que haya guardado acá.
+          "En reparación" y "Baja" los manejás vos y no se tocan.
+        </small>
         <small class="field-error"><%= errores.estado || '' %></small>
       </div>
 
@@ -86,7 +91,10 @@
         <small>JPG, PNG, WEBP o GIF · máximo 5 MB</small>
       </div>
 
-      <input type="hidden" name="foto" value="<%= item && item.foto ? item.foto : '' %>" />
+      <%# Guarda la foto actual cuando no se sube una nueva. Nombre propio para no
+          chocar con el input de archivo: dos inputs con el mismo name HARAN que
+          req.body.foto llegue como array. %>
+      <input type="hidden" name="foto_actual" value="<%= item && item.foto ? item.foto : '' %>" />
 
       <button type="submit" class="btn btn--primary btn--block">
         <%= item ? 'Guardar cambios' : 'Cargar ítem' %>

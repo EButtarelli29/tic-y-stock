@@ -1,0 +1,79 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<main class="page">
+  <a class="btn btn--outline btn--sm" href="/admin/movimientos">← Volver a movimientos</a>
+
+  <section class="card form-card">
+    <div class="card-header">
+      <h1>Registrar devolución</h1>
+      <p>El préstamo queda cerrado y el stock vuelve al pañol.</p>
+    </div>
+
+    <% if (Object.keys(errores).length > 0) { %>
+      <div class="alert" role="alert">Revisá los campos marcados en el formulario.</div>
+    <% } %>
+
+    <%# Si el préstamo se devolvió desde otra pestaña entre la carga del form y el
+        envío, el select queda vacío y sin el mensaje de error el usuario solo
+        ve "no hay préstamos abiertos" sin entender por qué su acción falló. %>
+    <% if (prestamos.length === 0) { %>
+      <div class="empty-state">
+        <h2><%= errores.id_retiro ? 'No se pudo registrar la devolución' : 'No hay préstamos abiertos' %></h2>
+        <p>
+          <%= errores.id_retiro || 'No queda ningún material afuera del pañol, así que no hay nada que devolver.' %>
+        </p>
+        <a class="btn btn--outline" href="/admin/movimientos">Ver el historial</a>
+        <a class="btn btn--primary" href="/admin/movimientos/retiro">Registrar un retiro</a>
+      </div>
+    <% } else { %>
+      <form action="/admin/movimientos/devolucion" method="post" novalidate>
+        <div class="field">
+          <label for="id_retiro">Préstamo que se devuelve</label>
+          <select id="id_retiro" name="id_retiro" required>
+            <option value="">Elegí el préstamo…</option>
+            <% prestamos.forEach((p) => { %>
+              <option value="<%= p.id %>" <%= form.id_retiro === String(p.id) ? 'selected' : '' %>>
+                #<%= p.id %> · <%= p.item_nombre %> (<%= p.cantidad %>) · <%= p.usuario_nombre %> · hace <%= p.dias %> día(s)
+              </option>
+            <% }) %>
+          </select>
+          <small class="field-error"><%= errores.id_retiro || '' %></small>
+        </div>
+
+        <%# Resumen del préstamo elegido (llega desde el botón "Devolver" del historial). %>
+        <% if (retiro) { %>
+          <dl class="info-list">
+            <div><dt>Ítem</dt><dd><%= retiro.item_nombre %></dd></div>
+            <div><dt>Cantidad</dt><dd><%= retiro.cantidad %></dd></div>
+            <div><dt>Se lo llevó</dt><dd><%= retiro.usuario_nombre %></dd></div>
+            <div><dt>Retirado</dt><dd><%= new Date(retiro.fecha_hora).toLocaleString('es-AR') %> (hace <%= retiro.dias %> día(s))</dd></div>
+            <% if (retiro.observaciones) { %>
+              <div><dt>Nota del retiro</dt><dd><%= retiro.observaciones %></dd></div>
+            <% } %>
+          </dl>
+        <% } %>
+
+        <div class="field">
+          <label for="id_usuario">Quién hace la devolución</label>
+          <select id="id_usuario" name="id_usuario" required>
+            <option value="">Elegí a quién…</option>
+            <% usuarios.forEach((u) => { %>
+              <option value="<%= u.id %>" <%= form.id_usuario === String(u.id) ? 'selected' : '' %>><%= u.nombre %></option>
+            <% }) %>
+          </select>
+          <small class="field-error"><%= errores.id_usuario || '' %></small>
+        </div>
+
+        <div class="field">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" name="observaciones" rows="3" maxlength="500" placeholder="Cómo volvió el material, si faltó algo…"><%= form.observaciones %></textarea>
+          <small class="field-error"><%= errores.observaciones || '' %></small>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Registrar devolución</button>
+      </form>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>

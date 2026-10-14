@@ -12,7 +12,7 @@
   <form class="filters-form" action="/panel" method="get">
     <div class="field filters-search">
       <label class="sr-only" for="buscar-material">Buscar por nombre</label>
-      <input id="buscar-material" name="buscar" type="search" placeholder="Buscar material (escribí para filtrar)" data-filtro-busqueda />
+      <input id="buscar-material" name="q" type="search" placeholder="Buscar material…" value="<%= q %>" data-filtro-busqueda />
     </div>
     <div class="field">
       <label for="tipo">Tipo</label>
@@ -44,7 +44,7 @@
   <% } else { %>
     <section class="cards-grid" data-grilla-materiales>
       <% items.forEach((item) => { %>
-        <a class="item-card" href="/panel/item/<%= item.id %>" data-nombre="<%= item.nombre.toLowerCase() %>" data-categoria="<%= item.categoria %>">
+        <a class="item-card" href="/panel/item/<%= item.id %>" data-texto="<%= [item.nombre, item.categoria, item.observaciones].filter(Boolean).join(' ').toLowerCase() %>">
           <div class="item-card-media">
             <% if (item.foto) { %>
               <img src="<%= item.foto %>" alt="Foto de <%= item.nombre %>" loading="lazy" />
@@ -69,6 +69,7 @@
         </a>
       <% }) %>
     </section>
+    <p class="muted empty-busqueda" data-sin-resultados hidden>No hay materiales que coincidan con la búsqueda.</p>
   <% } %>
 </main>
 <script src="/js/panel.js" defer></script>

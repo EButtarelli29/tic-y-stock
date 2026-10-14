@@ -1,8 +1,17 @@
 const fs = require('fs');
 const path = require('path');
 const Item = require('../models/item.model');
+const Movimiento = require('../models/movimiento.model');
+const { renderError } = require('../middleware/error.middleware');
+
+// Límites de longitud según los VARCHAR del esquema (db/schema.sql).
+const MAX_NOMBRE = 190;
+const MAX_CATEGORIA = 60;
+const MAX_UBICACION = 120;
+const MAX_OBSERVACIONES = 500;
 
 const ESTADOS = ['disponible', 'prestado', 'en_reparacion', 'baja'];
+const ORDENES_INVENTARIO = ['nombre', 'cantidad', 'categoria'];
 const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads', 'items');
 
 function validarItem(datos) {
@@ -10,9 +19,13 @@ function validarItem(datos) {
 
   if (!datos.nombre || datos.nombre.trim().length < 2) {
     errores.nombre = 'Ingresá el nombre del ítem.';
+  } else if (datos.nombre.length > MAX_NOMBRE) {
+    errores.nombre = `El nombre no puede superar los ${MAX_NOMBRE} caracteres.`;
   }
   if (!datos.categoria || datos.categoria.trim().length < 2) {
     errores.categoria = 'Ingresá una categoría (por ejemplo: "Componentes", "Cables").';
+  } else if (datos.categoria.length > MAX_CATEGORIA) {
+    errores.categoria = `La categoría no puede superar los ${MAX_CATEGORIA} caracteres.`;
   }
   const cantidad = Number(datos.cantidad);
   if (!Number.isInteger(cantidad) || cantidad < 0) {
@@ -25,8 +38,11 @@ function validarItem(datos) {
   if (!ESTADOS.includes(datos.estado)) {
     errores.estado = 'Elegí un estado válido.';
   }
-  if (datos.observaciones && datos.observaciones.length > 500) {
-    errores.observaciones = 'Las observaciones no pueden superar los 500 caracteres.';
+  if (datos.ubicacion && datos.ubicacion.length > MAX_UBICACION) {
+    errores.ubicacion = `La ubicación no puede superar los ${MAX_UBICACION} caracteres.`;
+  }
+  if (datos.observaciones && datos.observaciones.length > MAX_OBSERVACIONES) {
+    errores.observaciones = `Las observaciones no pueden superar los ${MAX_OBSERVACIONES} caracteres.`;
   }
 
   return errores;
@@ -45,37 +61,58 @@ function limpiarDatos(body) {
   };
 }
 
-async function listar(req, res) {
-  const { q = '', categoria = '', estado = '', ubicacion = '' } = req.query;
+/** Lee los filtros de la URL y los normaliza una sola vez. */
+function leerFiltros(query) {
+  return {
+    q: String(query.q || '').trim(),
+    categoria: String(query.categoria || '').trim(),
+    estado: ESTADOS.includes(query.estado) ? query.estado : '',
+    ubicacion: String(query.ubicacion || '').trim(),
+    stockCritico: query.stock_critico === '1',
+  };
+}
 
-  const items = await Item.findAll({
-    q: String(q).trim(),
-    categoria: String(categoria).trim(),
-    estado: String(estado).trim(),
-    ubicacion: String(ubicacion).trim(),
+const POR_PAGINA = 25;
+
+async function listar(req, res) {
+  const filtros = leerFiltros(req.query);
+  const orden = ORDENES_INVENTARIO.includes(req.query.orden) ? req.query.orden : 'nombre';
+
+  const total = await Item.contarConFiltros(filtros);
+  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const pagina = Math.min(Math.max(Number(req.query.pagina) || 1, 1), paginas);
+
+  const items = await Item.findAll(filtros, {
+    limite: POR_PAGINA,
+    offset: (pagina - 1) * POR_PAGINA,
+    orden,
   });
+
+  // Una sola consulta para toda la página (no una por fila): le dice al docente
+  // qué ítems tienen material afuera, que es la señal de que el campo manual
+  // `estado = 'prestado'` quedó viejo.
+  const prestamosPorItem = await Movimiento.activosPorItem(items.map((i) => i.id));
 
   res.render('inventario', {
     title: 'Inventario',
     user: req.session.user,
     seccion: 'inventario',
     items,
+    prestamosPorItem,
     categorias: await Item.categorias(),
     ubicaciones: await Item.ubicaciones(),
     ESTADOS,
-    filtros: { q: String(q).trim(), categoria: String(categoria).trim(), estado: String(estado).trim(), ubicacion: String(ubicacion).trim() },
+    filtros,
+    orden,
+    paginacion: {
+      pagina,
+      paginas,
+      total,
+      porPagina: POR_PAGINA,
+      desde: total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1,
+      hasta: Math.min(pagina * POR_PAGINA, total),
+    },
   });
-}
-
-async function buscarJson(req, res) {
-  const { q = '', categoria = '', estado = '', ubicacion = '' } = req.query;
-  const items = await Item.findAll({
-    q: String(q).trim(),
-    categoria: String(categoria).trim(),
-    estado: String(estado).trim(),
-    ubicacion: String(ubicacion).trim(),
-  });
-  res.json(items);
 }
 
 async function mostrarNuevo(req, res) {
@@ -135,23 +172,13 @@ async function mostrarEditar(req, res) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
   const item = await Item.findById(id);
 
   if (!item) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
   res.render('item-form', {
@@ -181,23 +208,20 @@ async function actualizar(req, res) {
   const item = await Item.findById(id);
 
   if (!item) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
   const datos = limpiarDatos(req.body);
 
   if (req.file) {
+    // Se subió una foto nueva: se usa esa (y más abajo se borra la anterior).
     datos.foto = `/uploads/items/${req.file.filename}`;
+  } else if (req.body.quitar_foto === '1') {
+    datos.foto = '';
   } else {
-    datos.foto = String(req.body.foto || (item.foto || ''));
-    if (req.body.quitar_foto === '1') {
-      datos.foto = '';
-    }
+    // Sin foto nueva: se conserva la actual, que viaja en el campo oculto
+    // `foto_actual` (no en `foto`, que es el input de archivo).
+    datos.foto = String(req.body.foto_actual || item.foto || '');
   }
 
   const errores = validarItem(datos);
@@ -227,11 +251,34 @@ async function actualizar(req, res) {
     eliminarArchivoSilencioso(path.join(UPLOADS_DIR, path.basename(item.foto)));
   }
 
-  req.session.mensaje = {
-    texto: 'Ítem actualizado correctamente.',
-    tipo: 'exito',
-  };
+  req.session.mensaje = mensajeGuardado(datos, id);
   res.redirect('/admin/inventario');
+}
+
+/**
+ * Aviso de guardado, o aviso de que la app normalizó el estado.
+ *
+ * `Item.update` recalcula `estado` después de aplicar el formulario, así que
+ * guardar "disponible" en un ítem con material afuera (o "prestado" en uno sin
+ * préstamos) no se queda: el valor final es el que dicen los movimientos. Decirlo
+ * en vez de mostrar un "actualizado correctamente" mudo es la diferencia entre que
+ * el docente entienda el sistema y que piense que la app se le pasó un dato.
+ *
+ * La diferencia solo puede aparecer entre `disponible` y `prestado`: `baja` y
+ * `en_reparacion` son decisiones del docente y el recálculo no las toca.
+ */
+async function mensajeGuardado(datos, id) {
+  const actualizado = await Item.findById(id);
+  if (actualizado && actualizado.estado !== datos.estado) {
+    const motivo = actualizado.estado === 'prestado'
+      ? 'hay material de este ítem afuera del pañol'
+      : 'no queda nada de este ítem prestado';
+    return {
+      texto: `Ítem actualizado, pero el estado quedó en "${actualizado.estado}" porque ${motivo}. Ese valor se calcula solo.`,
+      tipo: 'aviso',
+    };
+  }
+  return { texto: 'Ítem actualizado correctamente.', tipo: 'exito' };
 }
 
 async function eliminar(req, res) {
@@ -239,15 +286,15 @@ async function eliminar(req, res) {
   const item = await Item.findById(id);
 
   if (!item) {
-    return res.status(404).render('error', {
-      title: 'Ítem no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El ítem que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El ítem que buscás no existe.', 'Ítem no encontrado');
   }
 
-  await Item.remove(id);
+  const borrado = await Item.remove(id);
+
+  if (!borrado.ok) {
+    req.session.mensaje = { texto: borrado.error, tipo: 'error' };
+    return res.redirect('/admin/inventario');
+  }
 
   if (item.foto) {
     eliminarArchivoSilencioso(path.join(UPLOADS_DIR, path.basename(item.foto)));
@@ -268,4 +315,4 @@ function eliminarArchivoSilencioso(ruta) {
   }
 }
 
-module.exports = { listar, buscarJson, mostrarNuevo, crear, mostrarEditar, actualizar, eliminar };
+module.exports = { listar, mostrarNuevo, crear, mostrarEditar, actualizar, eliminar };

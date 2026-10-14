@@ -3,18 +3,24 @@ const Item = require('../models/item.model');
 const User = require('../models/user.model');
 const Alerta = require('../models/alerta.model');
 const Movimiento = require('../models/movimiento.model');
+const { renderError } = require('../middleware/error.middleware');
 
 const ROLES = ['usuario', 'superusuario'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_NOMBRE = 120;
+const MAX_EMAIL = 190;
+const MIN_PASSWORD = 6;
 
 async function mostrarDashboard(req, res) {
-  const [totalItems, stockCritico, alertasActivas, ultimosMovimientos, totalSuperusuarios] = await Promise.all([
-    Item.contar(),
-    Item.stockCritico(),
-    Alerta.countActivas(),
-    Movimiento.ultimos(8),
-    User.countByRol('superusuario'),
-  ]);
+  const [totalItems, stockCritico, alertasActivas, ultimosMovimientos, totalSuperusuarios, prestamosActivos] =
+    await Promise.all([
+      Item.contar(),
+      Item.stockCritico(),
+      Alerta.countActivas(),
+      Movimiento.ultimos(8),
+      User.countByRol('superusuario'),
+      Movimiento.contarPrestamosActivos(),
+    ]);
 
   res.render('admin', {
     title: 'Panel del superusuario',
@@ -26,6 +32,7 @@ async function mostrarDashboard(req, res) {
       alertasActivas,
       ultimosMovimientos,
       totalSuperusuarios,
+      prestamosActivos,
     },
   });
 }
@@ -103,12 +110,7 @@ async function mostrarEditarUsuario(req, res) {
   const usuario = await User.findById(id);
 
   if (!usuario) {
-    return res.status(404).render('error', {
-      title: 'Usuario no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El usuario que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El usuario que buscás no existe.', 'Usuario no encontrado');
   }
 
   res.render('usuario-form', {
@@ -132,12 +134,7 @@ async function actualizarUsuario(req, res) {
   const usuario = await User.findById(id);
 
   if (!usuario) {
-    return res.status(404).render('error', {
-      title: 'Usuario no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El usuario que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El usuario que buscás no existe.', 'Usuario no encontrado');
   }
 
   const datos = {
@@ -202,12 +199,7 @@ async function eliminarUsuario(req, res) {
   const usuario = await User.findById(id);
 
   if (!usuario) {
-    return res.status(404).render('error', {
-      title: 'Usuario no encontrado',
-      user: req.session.user,
-      codigo: 404,
-      mensaje: 'El usuario que buscás no existe.',
-    });
+    return renderError(req, res, 404, 'El usuario que buscás no existe.', 'Usuario no encontrado');
   }
 
   if (usuario.rol === 'superusuario' && (await User.countByRol('superusuario')) === 1) {
@@ -215,7 +207,13 @@ async function eliminarUsuario(req, res) {
     return res.redirect('/admin/usuarios');
   }
 
-  await User.remove(id);
+  const borrado = await User.remove(id);
+
+  if (!borrado.ok) {
+    req.session.mensaje = { texto: borrado.error, tipo: 'error' };
+    return res.redirect('/admin/usuarios');
+  }
+
   req.session.mensaje = { texto: 'Usuario eliminado.', tipo: 'exito' };
   res.redirect('/admin/usuarios');
 }
@@ -225,18 +223,22 @@ function validarUsuario({ nombre, email, rol, contraseña }, { esNuevo }) {
 
   if (!nombre || nombre.trim().length < 2) {
     errores.nombre = 'Ingresá el nombre completo.';
+  } else if (nombre.length > MAX_NOMBRE) {
+    errores.nombre = `El nombre no puede superar los ${MAX_NOMBRE} caracteres.`;
   }
   if (!email || !EMAIL_REGEX.test(email)) {
     errores.email = 'Ingresá un correo electrónico válido.';
+  } else if (email.length > MAX_EMAIL) {
+    errores.email = 'El correo es demasiado largo.';
   }
   if (!ROLES.includes(rol)) {
     errores.rol = 'Elegí un rol válido.';
   }
-  if (esNuevo && (!contraseña || contraseña.length < 6)) {
-    errores.password = 'La contraseña debe tener al menos 6 caracteres.';
+  if (esNuevo && (!contraseña || contraseña.length < MIN_PASSWORD)) {
+    errores.password = `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`;
   }
-  if (!esNuevo && contraseña && contraseña.length < 6) {
-    errores.password = 'La nueva contraseña debe tener al menos 6 caracteres.';
+  if (!esNuevo && contraseña && contraseña.length < MIN_PASSWORD) {
+    errores.password = `La nueva contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`;
   }
 
   return errores;
